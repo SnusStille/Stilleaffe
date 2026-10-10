@@ -5,7 +5,7 @@ import { iso, workdaysLeft } from '@/lib/calc';
 const hits = new Map<string, number[]>();
 const TOOLS = [
   { name: 'registrera_dag', description: 'Föreslå att registrera/uppdatera säljresultat för ett datum (ersätter befintlig registrering för datumet). Användaren godkänner innan det sparas.', input_schema: { type: 'object', properties: { entry_date: { type: 'string', description: 'YYYY-MM-DD' }, sales: { type: 'integer' }, tb_sek: { type: 'number' }, hours: { type: 'number' }, note: { type: 'string' } }, required: ['entry_date', 'sales', 'tb_sek'] } },
-  { name: 'satt_mal', description: 'Föreslå nya mål (ange bara de som ska ändras). Användaren godkänner innan det sparas.', input_schema: { type: 'object', properties: { daily_sales: { type: 'integer' }, daily_tb: { type: 'number' }, monthly_sales: { type: 'integer' }, monthly_tb: { type: 'number' } } } },
+  { name: 'satt_mal', description: 'Föreslå nya mål (ange bara de som ska ändras). Användaren godkänner innan det sparas.', input_schema: { type: 'object', properties: { daily_sales: { type: 'integer' }, daily_tb: { type: 'number' }, weekly_sales: { type: 'integer' }, weekly_tb: { type: 'number' }, monthly_sales: { type: 'integer' }, monthly_tb: { type: 'number' } } } },
   { name: 'skriv_kommentar', description: 'Föreslå ett meddelande till den andra personen (Stille eller Affe). Skickas först när användaren godkänner.', input_schema: { type: 'object', properties: { body: { type: 'string' }, entry_date: { type: 'string', description: 'valfritt YYYY-MM-DD' } }, required: ['body'] } },
 ];
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const sb = admin(), since = iso(new Date(now - 60 * 864e5));
   const [rows, g, cm] = await Promise.all([
     sb.from('sales_entries').select('entry_date,sales,tb_sek,hours,note').gte('entry_date', since).order('entry_date'),
-    sb.from('goals').select('daily_sales,daily_tb,monthly_sales,monthly_tb').eq('id', 1).maybeSingle(),
+    sb.from('goals').select('daily_sales,daily_tb,weekly_sales,weekly_tb,monthly_sales,monthly_tb').eq('id', 1).maybeSingle(),
     sb.from('comments').select('author,body,entry_date,created_at').order('id', { ascending: false }).limit(10),
   ]);
   const td = /^\d{4}-\d{2}-\d{2}$/.test(body.today) ? body.today : iso(new Date()); // klientens datum (Vercel kör UTC)
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
         max_tokens: 700,
         system,
         tools,

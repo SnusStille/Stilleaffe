@@ -22,5 +22,5 @@ export async function GET() {
       else db = 'ok';
     }
   } catch (e: any) { db = 'FEL'; dbDetail = e?.message || String(e); }
-  return NextResponse.json({ v: 'v5', env, db, dbDetail });
+  return NextResponse.json({ v: 'v7', env, db, dbDetail });
 }

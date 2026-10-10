@@ -48,10 +48,10 @@ export async function pwFor(r: string): Promise<string | undefined> {
 
 function secretFor(role: string): string {
   const explicit = (process.env.SESSION_SECRET || '').trim();
-  if (explicit.length >= 8) return explicit + '::sd-v5::' + role;
+  if (explicit.length >= 8) return explicit + '::sd-v7::' + role;
   const sp = (process.env.SELLER_PASSWORD || '').trim();
   const mp = (process.env.MANAGER_PASSWORD || '').trim();
-  return 'sd-fallback::' + sp + '::' + mp + '::' + role + '::v5';
+  return 'sd-fallv7::' + sp + '::' + mp + '::' + role + '::v7';
 }
 
 function bufferToHex(buf: ArrayBuffer): string {
@@ -61,7 +61,7 @@ function bufferToHex(buf: ArrayBuffer): string {
 export async function token(pw: string, role: string): Promise<string> {
   // V5: inkludera även en hårdkodad salt i signaturen för att förhindra
   // att någon som känner till formatet kan byta cookie-värde.
-  const msg = 'sd-session-v5:' + role + ':' + pw;
+  const msg = 'sd-session-v7:' + role + ':' + pw;
   const sec = secretFor(role);
   const keyData = new TextEncoder().encode(sec + '::key');
   const k = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
