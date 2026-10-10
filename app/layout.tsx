@@ -1,5 +1,6 @@
 import './globals.css';
 import './design-v9.css';
+import './design-v10.css';
 import Fx from './Fx';
 export const metadata={title:'Säljdashboard',description:'Privat säljuppföljning – Stille & Affe',icons:{icon:'/icon.svg',apple:'/icon.svg'},appleWebApp:{capable:true,title:'Sälj'}};
 export const viewport={width:'device-width',initialScale:1,viewportFit:'cover'as const,themeColor:'#05070b'};

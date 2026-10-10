@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/secrets';
-const err = (m: string, s = 400) => NextResponse.json({ error: m }, { status: s });
+const privateHeaders = { 'Cache-Control': 'private, no-store, no-cache, max-age=0, must-revalidate', Pragma: 'no-cache' };
+const err = (m: string, s = 400) => NextResponse.json({ error: m }, { status: s, headers: privateHeaders });
 const REACTIONS = ['👍','❤️','🔥','🎉','😂','😎','💪'];
 const validDate = (d: unknown): d is string => { if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false; const t = Date.parse(d + 'T00:00:00Z'); return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === d; };
 
@@ -12,7 +13,8 @@ function roleFor(req: Request) {
 export async function GET(req: Request) {
   const role = roleFor(req);
   if (!role) return err('Inte inloggad', 401);
-  const sb = admin();
+  let sb: ReturnType<typeof admin>;
+  try { sb = admin(); } catch (e: any) { return err('Databasen är inte konfigurerad: ' + (e?.message || 'okänt fel'), 503); }
   const [c, s] = await Promise.all([
     sb.from('comments').select('*').order('id', { ascending: false }).limit(200),
     sb.from('app_settings').select('value').eq('key', 'seen_' + role).maybeSingle(),
@@ -24,15 +26,16 @@ export async function GET(req: Request) {
     items: c.data || [],
     unread: (c.data || []).filter((x: any) => x.author !== role && x.id > seen).length,
     reactions: REACTIONS,
-  });
+  }, { headers: privateHeaders });
 }
 
 export async function POST(req: Request) {
   const role = roleFor(req);
   if (!role) return err('Inte inloggad', 401);
-  const sb = admin();
   let b: any;
   try { b = await req.json(); } catch { return err('Ogiltig förfrågan'); }
+  let sb: ReturnType<typeof admin>;
+  try { sb = admin(); } catch (e: any) { return err('Databasen är inte konfigurerad: ' + (e?.message || 'okänt fel'), 503); }
 
   if (b.action === 'seen') {
     const { data, error } = await sb.from('comments').select('id').order('id', { ascending: false }).limit(1);

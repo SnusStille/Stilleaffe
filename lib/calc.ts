@@ -18,6 +18,7 @@ export const today = () => {
   const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
   return `${p.year}-${p.month}-${p.day}`;
 };
+const stockholmDate = () => { const [y, m, d] = today().split('-').map(Number); return new Date(y, m - 1, d); };
 export const mon = (d: string) => d.slice(0, 7);
 export const year = (d: string) => d.slice(0, 4);
 export const fmt = (n: number) => Math.round(n).toLocaleString('sv-SE');
@@ -57,10 +58,10 @@ export function weekRange(key?: string): { start: Date; end: Date } {
   const sunday = new Date(monday); sunday.setUTCDate(monday.getUTCDate() + 6);
   return { start: new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate()), end: new Date(sunday.getUTCFullYear(), sunday.getUTCMonth(), sunday.getUTCDate()) };
 }
-export const workdaysLeft = () => { const n = new Date(); return Math.max(wd(new Date(n.getFullYear(), n.getMonth(), n.getDate()), new Date(n.getFullYear(), n.getMonth() + 1, 0)), 1); };
-export const workdaysTotal = () => { const n = new Date(); return wd(new Date(n.getFullYear(), n.getMonth(), 1), new Date(n.getFullYear(), n.getMonth() + 1, 0)); };
-export const workdaysDone = () => { const n = new Date(); return wd(new Date(n.getFullYear(), n.getMonth(), 1), new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1)); };
-export const workdaysElapsed = () => { const n = new Date(); return wd(new Date(n.getFullYear(), n.getMonth(), 1), new Date(n.getFullYear(), n.getMonth(), n.getDate())); };
+export const workdaysLeft = () => { const n = stockholmDate(); return wd(n, new Date(n.getFullYear(), n.getMonth() + 1, 0)); };
+export const workdaysTotal = () => { const n = stockholmDate(); return wd(new Date(n.getFullYear(), n.getMonth(), 1), new Date(n.getFullYear(), n.getMonth() + 1, 0)); };
+export const workdaysDone = () => { const n = stockholmDate(); const end = new Date(n); end.setDate(end.getDate() - 1); return wd(new Date(n.getFullYear(), n.getMonth(), 1), end); };
+export const workdaysElapsed = () => { const n = stockholmDate(); return wd(new Date(n.getFullYear(), n.getMonth(), 1), n); };
 
 export function range(a: Row[], k: string): Row[] {
   const n = new Date(), t = today();

@@ -1,6 +1,6 @@
 # Säljdashboard v7 — MAXAD
 
-Privat svensk säljuppföljning för Stille & Affe. Next.js 14 + Supabase, med server-side auth, dags-/vecko-/månadsmål, humör, rating, taggar, aktivitetsflöde, AI-coach och statistik.
+Privat svensk säljuppföljning för Stille & Affe. Next.js 15 + Supabase, med server-side auth, dags-/vecko-/månadsmål, humör, rating, taggar, aktivitetsflöde, AI-coach och statistik.
 
 ## Snabbstart lokalt
 
@@ -22,6 +22,13 @@ Använd Node.js 22.x.
 - SQL-migrering som fungerar från både v5- och v6-tabeller; upprepade körningar återställer inte sparade mål.
 - Uppdaterade prognoser och jämförelser utifrån kalenderns faktiska arbetsdagar.
 
+## Senaste förbättringar
+
+- Tydlig, rollanpassad översikt: Stille får dagens mål och nästa steg; Affe får en skrivskyddad chefsbild med veckomål och jämförelse mot motsvarande dagar föregående vecka.
+- Säljaren kan få högst en automatiserad, datagrundad AI-nudge per lokal dag när månadstakten eller dagens resultat halkar efter. Den kan stängas av i Inställningar; utan AI finns fortfarande deterministiska tempo- och målråd.
+- Databasfel har tydligare åtgärder: försök igen och öppna `/api/health`.
+- Frontend beroenden är uppdaterade till Next.js 15.5.27 och PostCSS 8.5.29; kör `npm run build` före deploy.
+
 ## Deploya till Vercel
 
 Kopiera filerna till repot `SnusStille/Stilleaffe`, committa och pusha; Vercel auto-deployar. Läs `UPGRADE-v7.md` för SQL- och Vercel-stegen.
@@ -34,7 +41,7 @@ Appen behöver dessa servervariabler:
 
 - `SELLER_PASSWORD`
 - `MANAGER_PASSWORD`
-- `SESSION_SECRET` (minst 32 slumpmässiga tecken rekommenderas)
+- `SESSION_SECRET` (valfri; minst 32 slumpmässiga tecken rekommenderas. Om den saknas härleds sessionsnyckeln från lösenorden.)
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SECRET_KEY` (föredragen, `sb_secret_...`) **eller** befintliga `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` JWT); om båda sätts prioriteras `SUPABASE_SECRET_KEY`
 - `ANTHROPIC_API_KEY` (valfri om AI inte ska användas)

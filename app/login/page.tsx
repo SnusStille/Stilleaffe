@@ -59,12 +59,12 @@ export default function Login() {
       <div className="lggrid" aria-hidden />
       <div className="lgsparks" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ ['--x' as any]: (i * 5.7 + 3) % 100, ['--d' as any]: (8 + (i % 5) * 2) + 's', ['--dl' as any]: -(i * 0.8) + 's' }} />)}</div>
       <div className={'lg' + (shake ? ' shake' : '') + (ok ? ' win' : '')}>
-        <div className="cubewrap" aria-hidden><div className="cube"><b>S</b><b>S</b><b>S</b><b>S</b><b /><b /></div></div>
+        <div className="brand-mark" role="img" aria-label="Stille och Affe"><span>S</span><span>A</span></div>
         <h1>Stilleaffe</h1>
         <p className="s">Säljuppföljning för Stille &amp; Affe</p>
         <form method="post" action="/api/login" onSubmit={onSubmit} noValidate>
           <input type="hidden" name="role" value={role} />
-          <div className="seg" role="tablist" aria-label="Välj roll">
+          <div className="seg" role="group" aria-label="Välj roll för inloggning">
             {[['seller', 'Stille', 'Säljare'], ['manager', 'Affe', 'Chef']].map(([v, n, t]) => (
               <button key={v} type="button" className={role === v ? 'on' : ''} onClick={() => setRole(v as any)} aria-pressed={role === v}>
                 {n}<small>{t}</small>
@@ -72,8 +72,8 @@ export default function Login() {
             ))}
           </div>
           <div className="pwrap">
-            <input ref={pwRef} name="password" type={show ? 'text' : 'password'} autoFocus required placeholder="Lösenord" autoComplete="current-password" />
-            <button type="button" className="eye" onClick={() => setShow(v => !v)} aria-label={show ? 'Dölj lösenord' : 'Visa lösenord'} tabIndex={-1}>
+            <input ref={pwRef} name="password" type={show ? 'text' : 'password'} autoFocus required placeholder="Lösenord" aria-label="Lösenord" autoComplete="current-password" />
+            <button type="button" className="eye" onClick={() => setShow(v => !v)} aria-label={show ? 'Dölj lösenord' : 'Visa lösenord'}>
               {show ? '🙈' : '👁'}
             </button>
           </div>

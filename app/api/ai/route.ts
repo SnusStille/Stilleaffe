@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getKeys, admin } from '@/lib/secrets';
-import { iso, workdaysLeft } from '@/lib/calc';
+import { iso, today, workdaysLeft } from '@/lib/calc';
 
 const hits = new Map<string, number[]>();
 const TOOLS = [
@@ -32,8 +32,8 @@ export async function POST(req: Request) {
     sb.from('goals').select('daily_sales,daily_tb,weekly_sales,weekly_tb,monthly_sales,monthly_tb').eq('id', 1).maybeSingle(),
     sb.from('comments').select('author,body,entry_date,created_at').order('id', { ascending: false }).limit(10),
   ]);
-  const td = /^\d{4}-\d{2}-\d{2}$/.test(body.today) ? body.today : iso(new Date()); // klientens datum (Vercel kör UTC)
-  const data = { idag: td, veckodag: new Date(td + 'T12:00').toLocaleDateString('sv-SE', { weekday: 'long' }), arbetsdagar_kvar_i_manaden: Number.isInteger(body.wl) ? body.wl : workdaysLeft(), mal: g.data, registreringar_senaste_60_dagarna: rows.data || [], senaste_kommentarer: cm.data || [] };
+  const td = today();
+  const data = { idag: td, veckodag: new Date(td + 'T12:00').toLocaleDateString('sv-SE', { weekday: 'long', timeZone: 'Europe/Stockholm' }), arbetsdagar_kvar_i_manaden: workdaysLeft(), mal: g.data, registreringar_senaste_60_dagarna: rows.data || [], senaste_kommentarer: cm.data || [] };
   msgs[msgs.length - 1].content += `\n\n[AKTUELL DATA]\n${JSON.stringify(data)}`;
 
   const me = role === 'seller' ? 'Stille (säljaren)' : 'Affe (chefen, som följer Stilles resultat)';
