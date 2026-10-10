@@ -16,25 +16,12 @@ html{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26);background-clip:padding-box;border:2px solid transparent}
 
 /* Bakgrunden följer musen lite grann (parallax) */
-.aurora{transform:translate3d(calc(var(--px,0)*-26px),calc(var(--py,0)*-26px),0);transition:transform .6s var(--eio)}
 
-/* ---------- 3D-kort ---------- */
-.c:not(.pop):not(.sc):not(.chat),.lg{
-  --rx:0deg;--ry:0deg;
-  animation-fill-mode:backwards;
-  transform:perspective(1100px) rotateX(var(--rx)) rotateY(var(--ry));
-  transition:transform .18s ease-out,border-color .3s,box-shadow .35s,background .3s;
-  will-change:transform;
-}
-.c:not(.pop):not(.sc):not(.chat):hover{
-  transform:perspective(1100px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-4px);
-}
-.c:not(.pop):not(.sc):not(.chat)::after{
-  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .35s;
-  background:radial-gradient(460px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.10),transparent 46%);
-}
-.c:not(.pop):not(.sc):not(.chat):hover::after{opacity:1}
-.c:hover .v{filter:drop-shadow(0 0 16px color-mix(in srgb,var(--gr) 38%,transparent))}
+
+/* ---------- Kort: lugn hover ---------- */
+.c:not(.pop):not(.sc):not(.chat){animation-fill-mode:backwards;transition:border-color .3s,box-shadow .35s,background .3s,transform .25s var(--eio)}
+.c:not(.pop):not(.sc):not(.chat):hover{transform:translateY(-3px)}
+.c:hover .v{filter:drop-shadow(0 0 14px color-mix(in srgb,var(--gr) 32%,transparent))}
 
 /* ---------- Sidopanel som flytande glas (desktop) ---------- */
 @media(min-width:821px){
@@ -221,3 +208,32 @@ button.b:active,button.pri:active{transform:translateY(0) scale(.97)}
 @media(prefers-reduced-motion:reduce){
   .lg::before,.lg>*,.lg h1,.lg button.pri,.cubewrap::before,.cubewrap::after,.lgsparks i,aside button.nv,.tk-track,.mr-big,.stat-change.up,.ripple{animation:none!important}
 }
+
+/* ===========================================================
+   v12 — lugnare, stabilare, utloggning alltid nåbar
+   =========================================================== */
+@keyframes lgIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.bento .hero .ring,.logo i,.stat-change.up,.lg button.pri,.bar i::after{animation:none!important}
+.bar i::after{display:none}
+.mr-big{animation:none!important;background:none;-webkit-text-fill-color:currentColor;color:inherit}
+.lg h1{background:linear-gradient(120deg,#fff,var(--acc1));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:lgIn .7s var(--eio) .12s both!important}
+
+aside{overflow-y:auto;scrollbar-width:none}
+aside::-webkit-scrollbar{display:none}
+main{padding-bottom:max(60px,env(safe-area-inset-bottom))}
+@media(max-width:820px){main{padding-bottom:140px!important}}
+
+.logout-fix{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;z-index:150;padding:9px 14px;border-radius:999px;font-size:13px;font-weight:700;
+  background:rgba(10,13,18,.82);backdrop-filter:blur(14px);border:1px solid var(--bd);color:var(--mu)}
+.logout-fix:hover{color:#fff;border-color:color-mix(in srgb,var(--rd) 60%,transparent)}
+.top{padding-right:140px}
+@media(max-width:820px){.top{padding-right:128px}}
+
+.fix{margin-bottom:16px}
+.fix-row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin:12px 0}
+.fix-st{display:flex;align-items:center;gap:8px}
+.fix-st .b{width:48px;height:48px;font-size:24px;padding:0;border-radius:14px}
+.fix-st input{width:92px;height:56px;text-align:center;font-size:30px;font-weight:800}
+.fix-tb{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mu)}
+.fix-tb input{width:140px;height:48px;font-size:18px}
+.fix .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
