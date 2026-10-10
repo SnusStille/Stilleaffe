@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getKey, admin } from '@/lib/secrets';
+import { getKeys, admin } from '@/lib/secrets';
 import { iso, workdaysLeft } from '@/lib/calc';
 
 const hits = new Map<string, number[]>();
@@ -15,9 +15,9 @@ export async function POST(req: Request) {
   const now = Date.now(), h = (hits.get(role) || []).filter(t => now - t < 600000);
   if (h.length >= 20) return NextResponse.json({ error: 'För många frågor – vänta en stund.' }, { status: 429 });
   h.push(now); hits.set(role, h);
-  let key: string | null = null;
-  try { key = await getKey(); } catch { key = null; }
-  if (!key) return NextResponse.json({ error: 'AI är inte aktiverad. Lägg in API-nyckeln i AI-fliken.' }, { status: 503 });
+  let keys: string[] = [];
+  try { keys = await getKeys(); } catch { keys = []; }
+  if (!keys.length) return NextResponse.json({ error: 'AI är inte aktiverad. Lägg in API-nyckeln i AI-fliken.' }, { status: 503 });
 
   let body: any = {}; try { body = await req.json(); } catch {}
   let msgs = (Array.isArray(body.messages) ? body.messages : []).filter((m: any) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-8).map((m: any) => ({ role: m.role, content: m.content.slice(0, 1500) }));
@@ -41,17 +41,21 @@ export async function POST(req: Request) {
   const tools = role === 'seller' ? TOOLS : TOOLS.filter(t => t.name === 'skriv_kommentar');
 
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
-        max_tokens: 700,
-        system,
-        tools,
-        messages: msgs,
-      }),
-    });
-    if (!r.ok) return NextResponse.json({ error: r.status === 401 ? 'API-nyckeln är ogiltig.' : r.status === 429 ? 'Anthropic begränsar anropen just nu – försök igen strax.' : `AI-anropet misslyckades (${r.status}). Kontrollera ANTHROPIC_MODEL och nyckeln.` }, { status: 502 });
+    const payload = JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', max_tokens: 700, system, tools, messages: msgs });
+    let r!: Response;
+    for (const k of keys) {
+      r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': k, 'anthropic-version': '2023-06-01' }, body: payload });
+      if (r.status !== 401) break; // ogiltig/avstängd nyckel – prova nästa om det finns en
+    }
+    if (!r.ok) {
+      let detail = ''; try { const ej = await r.json(); detail = String(ej?.error?.message || '').slice(0, 160); } catch {}
+      const msg = r.status === 401 ? 'API-nyckeln är ogiltig eller avstängd. Skapa en ny på console.anthropic.com och lägg in den i AI-fliken eller i Vercel (ANTHROPIC_API_KEY).'
+        : r.status === 404 ? 'Modellen hittades inte. Kontrollera ANTHROPIC_MODEL i Vercel (nu: ' + (process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5') + ').'
+        : r.status === 429 ? 'Anthropic begränsar anropen just nu – försök igen strax.'
+        : /credit|balance|billing/i.test(detail) ? 'Kontot saknar kredit hos Anthropic. Fyll på under Plans & Billing.'
+        : `AI-anropet misslyckades (${r.status}). ${detail}`.trim();
+      return NextResponse.json({ error: msg }, { status: 502 });
+    }
     const j = await r.json(), blocks: any[] = j.content || [];
     const text = blocks.filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
     const proposals = blocks.filter(c => c.type === 'tool_use' && tools.some(t => t.name === c.name)).map(c => ({ tool: c.name, input: c.input }));

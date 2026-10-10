@@ -104,3 +104,120 @@ tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--gr)}
   .cube,.lggrid,.lgorbs i,.logo i,.bento .hero .ring,.bar i::after{animation:none!important}
   .c,.lg{transform:none!important}
 }
+
+/* ===========================================================
+   v10 — rollskin, kalender, chefsrapport, flytande dock
+   =========================================================== */
+@supports (animation-timeline:scroll()){
+  html::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z-index:200;pointer-events:none;
+    background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));transform-origin:0 50%;transform:scaleX(0);
+    animation:scrollProg linear both;animation-timeline:scroll(root)}
+  @keyframes scrollProg{to{transform:scaleX(1)}}
+}
+main{background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:28px 28px}
+
+/* Affes vy: egen identitet (guld/violett, serif-rubriker) – teman kan fortfarande åsidosätta */
+:root[data-role="manager"]:not([data-theme]){
+  --bg:#05050a;--gr:#f5c451;--gr2:#d99a1f;--acc1:#ffe08a;--acc2:#8b5cf6;--acc3:#38bdf8;
+  --g1:#f5c451;--g2:#8b5cf6;--g3:#38bdf8;
+}
+:root[data-role="manager"] .tab-wrap>h2{font-family:Georgia,'Times New Roman',serif;font-weight:700;letter-spacing:-.02em}
+:root[data-role="manager"] aside{background:linear-gradient(180deg,rgba(245,196,81,.07),rgba(139,92,246,.04))}
+
+.mr{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 16px}
+.mr-hero{grid-column:1/-1;background:linear-gradient(135deg,color-mix(in srgb,var(--g1) 16%,transparent),color-mix(in srgb,var(--g2) 10%,transparent))}
+.mr-hero .k{margin-bottom:6px}
+.mr-big{font-size:clamp(40px,7vw,68px);font-weight:800;letter-spacing:-.04em;line-height:1}
+.mr-big small{font-size:.32em;font-weight:600;color:var(--mu);margin-left:4px;letter-spacing:0}
+.mr-big .stat-change{font-size:.3em;margin-left:14px;vertical-align:middle}
+.mr-mid{font-size:26px;font-weight:800;margin:6px 0 4px;letter-spacing:-.02em}
+@media(max-width:820px){.mr{grid-template-columns:1fr}}
+
+/* Kalender */
+.cal{margin-top:16px}
+.cal-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-w{text-align:center;font-size:11px;color:var(--mu);letter-spacing:.12em;padding:4px 0}
+.cal-e{min-height:54px}
+.cal-d{min-height:54px;border-radius:12px;padding:6px 8px;display:flex;flex-direction:column;justify-content:space-between;
+  background:color-mix(in srgb,var(--gr) calc(var(--h,0)*55%),rgba(255,255,255,.03));border:1px solid var(--bd);
+  transition:transform .2s var(--eio),box-shadow .2s;cursor:default}
+.cal-d span{font-size:11px;color:var(--mu)}
+.cal-d b{font-size:16px;font-weight:800;align-self:flex-end}
+.cal-d.has:hover{transform:translateY(-3px) scale(1.05);box-shadow:0 12px 30px -12px color-mix(in srgb,var(--gr) 70%,transparent)}
+.cal-d.today{outline:2px solid var(--gr);outline-offset:1px}
+
+/* Flytande dock på mobil */
+@media(max-width:820px){
+  aside{left:10px;right:10px;bottom:10px;border:1px solid var(--bd)!important;border-radius:24px;
+    background:rgba(10,13,18,.78)!important;backdrop-filter:blur(22px) saturate(150%);box-shadow:0 22px 50px -10px rgba(0,0,0,.85)}
+  .fab{bottom:100px}
+}
+
+/* ===========================================================
+   v11 — ACTION: rörelse i inloggning, meny, ticker och effekter
+   =========================================================== */
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes spinAng{to{--ang:360deg}}
+@keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}12%{opacity:.9}100%{transform:translateY(-112vh) scale(1.3);opacity:0}}
+@keyframes orbit{to{transform:rotateX(var(--tx,72deg)) rotateZ(360deg)}}
+@keyframes lgIn{from{opacity:0;transform:translateY(18px) scale(.97);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+@keyframes btnPulse{0%,100%{box-shadow:0 12px 34px -12px color-mix(in srgb,var(--gr) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}50%{box-shadow:0 16px 52px -8px color-mix(in srgb,var(--gr) 95%,transparent),inset 0 1px 0 rgba(255,255,255,.55)}}
+@keyframes textFlow{to{background-position:300% 0}}
+@keyframes navIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes ringGlow{0%,100%{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--gr) 25%,transparent))}50%{filter:drop-shadow(0 0 26px color-mix(in srgb,var(--gr) 55%,transparent))}}
+@keyframes tick{to{transform:translateX(-25%)}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg) scale(1.1)}75%{transform:rotate(10deg) scale(1.1)}}
+@keyframes winBurst{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--gr) 70%,transparent)}100%{box-shadow:0 0 0 60px transparent}}
+
+/* Inloggning */
+.lg::before{padding:2px;background:conic-gradient(from var(--ang),transparent 0 55%,var(--gr) 78%,var(--g2) 90%,transparent 100%);animation:spinAng 5s linear infinite}
+.lg>*{animation:lgIn .7s var(--eio) both}
+.lg>*:nth-child(1){animation-delay:.05s}.lg>*:nth-child(2){animation-delay:.12s}.lg>*:nth-child(3){animation-delay:.2s}.lg>*:nth-child(4){animation-delay:.28s}.lg>*:nth-child(5){animation-delay:.36s}
+.lg.shake{animation:shake .45s var(--eio)}
+.lg.win{animation:winBurst .7s ease-out}
+.lg h1{background:linear-gradient(90deg,#fff,var(--acc1),var(--g2),#fff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:lgIn .7s var(--eio) .12s both,textFlow 9s linear infinite}
+.lg button.pri{animation:btnPulse 2.8s ease-in-out infinite}
+.lg input{transition:border-color .25s,box-shadow .25s,transform .25s}
+.lg input:focus{transform:translateY(-1px)}
+.seg button.on{animation:lgIn .35s var(--eio) both}
+.cubewrap{position:relative}
+.cubewrap::before,.cubewrap::after{content:"";position:absolute;inset:-20px;border-radius:50%;pointer-events:none;border:1px solid color-mix(in srgb,var(--gr) 55%,transparent);transform:rotateX(72deg);animation:orbit 7s linear infinite}
+.cubewrap::after{inset:-34px;--tx:-62deg;border-color:color-mix(in srgb,var(--g2) 45%,transparent);animation-duration:11s;animation-direction:reverse}
+.lgsparks i{position:fixed;bottom:-12px;left:calc(var(--x,50)*1%);width:3px;height:3px;border-radius:50%;pointer-events:none;background:var(--acc1);box-shadow:0 0 12px var(--gr);opacity:0;animation:rise var(--d,10s) linear infinite;animation-delay:var(--dl,0s)}
+
+/* Meny */
+aside button.nv{animation:navIn .55s var(--eio) both}
+aside button.nv:nth-of-type(1){animation-delay:.04s}aside button.nv:nth-of-type(2){animation-delay:.08s}aside button.nv:nth-of-type(3){animation-delay:.12s}aside button.nv:nth-of-type(4){animation-delay:.16s}aside button.nv:nth-of-type(5){animation-delay:.2s}aside button.nv:nth-of-type(6){animation-delay:.24s}aside button.nv:nth-of-type(7){animation-delay:.28s}aside button.nv:nth-of-type(8){animation-delay:.32s}aside button.nv:nth-of-type(9){animation-delay:.36s}aside button.nv:nth-of-type(10){animation-delay:.4s}aside button.nv:nth-of-type(11){animation-delay:.44s}
+aside button.nv .ic{display:inline-block;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+aside button.nv:hover .ic{transform:scale(1.28) rotate(-8deg)}
+aside button.nv:hover{transform:translateX(4px)}
+aside button.nv.on .ic{animation:wiggle .7s ease-out}
+
+/* Ripple + knappar */
+button{position:relative}
+.ripple{position:absolute;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,255,255,.45),transparent 65%);transform:scale(0);animation:ripple .65s ease-out forwards}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+button.b,button.pri,.seg button,.fab{overflow:hidden}
+button.b:hover{transform:translateY(-2px)}
+button.b:active,button.pri:active{transform:translateY(0) scale(.97)}
+
+/* Ticker */
+.ticker{overflow:hidden;border:1px solid var(--bd);border-radius:14px;margin:4px 0 16px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.tk-track{display:flex;width:max-content;animation:tick 28s linear infinite}
+.ticker:hover .tk-track{animation-play-state:paused}
+.tk-i{padding:10px 22px;font-size:13px;font-weight:600;white-space:nowrap;color:var(--mu)}
+.tk-i em{font-style:normal;color:var(--gr);margin-left:22px;font-size:9px;vertical-align:middle}
+
+/* Dashboard-effekter */
+.bento .hero .ring{animation:floatY 7s ease-in-out infinite,ringGlow 4s ease-in-out infinite}
+.c:hover .kpi-icon{animation:wiggle .6s ease-out}
+.mr-big{background:linear-gradient(90deg,#fff,var(--acc1),var(--g2),#fff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:textFlow 10s linear infinite}
+.mr-big small,.mr-big .stat-change{-webkit-text-fill-color:currentColor}
+.stat-change.up{animation:floatY 2.4s ease-in-out infinite}
+.aurora{animation-duration:18s}
+
+@media(prefers-reduced-motion:reduce){
+  .lg::before,.lg>*,.lg h1,.lg button.pri,.cubewrap::before,.cubewrap::after,.lgsparks i,aside button.nv,.tk-track,.mr-big,.stat-change.up,.ripple{animation:none!important}
+}

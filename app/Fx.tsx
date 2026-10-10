@@ -8,7 +8,22 @@ export default function Fx() {
     if (typeof window === 'undefined') return;
     const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!fine || reduce) return;
+    if (reduce) return;
+
+    // Ripple på knappar (fungerar även på touch)
+    const ripple = (e: PointerEvent) => {
+      const b = (e.target as HTMLElement | null)?.closest?.('button.b,button.pri,button.nv,.seg button,.fab') as HTMLElement | null;
+      if (!b) return;
+      const r = b.getBoundingClientRect();
+      const d = Math.max(r.width, r.height) * 2;
+      const el = document.createElement('span');
+      el.className = 'ripple';
+      el.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+      b.appendChild(el);
+      setTimeout(() => el.remove(), 650);
+    };
+    document.addEventListener('pointerdown', ripple, { passive: true });
+    if (!fine) return () => document.removeEventListener('pointerdown', ripple);
 
     const SEL = '.c:not(.pop):not(.sc):not(.chat),.lg';
     const root = document.documentElement;
@@ -45,6 +60,7 @@ export default function Fx() {
     document.addEventListener('pointermove', move, { passive: true });
     document.documentElement.addEventListener('pointerleave', leave);
     return () => {
+      document.removeEventListener('pointerdown', ripple);
       cancelAnimationFrame(raf);
       document.removeEventListener('pointermove', move);
       document.documentElement.removeEventListener('pointerleave', leave);

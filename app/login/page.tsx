@@ -14,7 +14,11 @@ export default function Login() {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [role, setRole] = useState<'seller' | 'manager'>('seller');
+  const [shake, setShake] = useState(false);
+  const [ok, setOk] = useState(false);
   const pwRef = useRef<HTMLInputElement>(null);
+  const bad = () => { setShake(true); setTimeout(() => setShake(false), 520); };
+  useEffect(() => { document.documentElement.dataset.role = role; }, [role]);
   useEffect(() => {
     const e = new URLSearchParams(location.search).get('e');
     if (e) setMsg(MSG[e] || { text: 'Något gick fel.' });
@@ -26,7 +30,7 @@ export default function Login() {
     const form = e.currentTarget;
     const fd = new FormData(form);
     const password = String(fd.get('password') || '').trim();
-    if (!password) { setMsg(MSG.pw); pwRef.current?.focus(); return; }
+    if (!password) { setMsg(MSG.pw); bad(); pwRef.current?.focus(); return; }
     setBusy(true); setMsg(null);
     try {
       const res = await fetch('/api/login', {
@@ -37,8 +41,8 @@ export default function Login() {
       });
       let data: any = {};
       try { data = await res.json(); } catch { data = {}; }
-      if (res.ok) { window.location.replace('/'); return; }
-      setMsg(MSG[data.error] || { text: data.error || 'Något gick fel.' });
+      if (res.ok) { setOk(true); setTimeout(() => window.location.replace('/'), 650); return; }
+      setMsg(MSG[data.error] || { text: data.error || 'Något gick fel.' }); bad();
     } catch {
       // fallback: native formulärpost
       form.submit();
@@ -53,7 +57,8 @@ export default function Login() {
     <div className="center">
       <div className="lgorbs" aria-hidden><i /><i /><i /></div>
       <div className="lggrid" aria-hidden />
-      <div className="lg">
+      <div className="lgsparks" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ ['--x' as any]: (i * 5.7 + 3) % 100, ['--d' as any]: (8 + (i % 5) * 2) + 's', ['--dl' as any]: -(i * 0.8) + 's' }} />)}</div>
+      <div className={'lg' + (shake ? ' shake' : '') + (ok ? ' win' : '')}>
         <div className="cubewrap" aria-hidden><div className="cube"><b>S</b><b>S</b><b>S</b><b>S</b><b /><b /></div></div>
         <h1>Stilleaffe</h1>
         <p className="s">Säljuppföljning för Stille &amp; Affe</p>
@@ -73,7 +78,7 @@ export default function Login() {
             </button>
           </div>
           <button type="submit" className="b pri big" disabled={busy} aria-busy={busy}>
-            {busy ? 'Loggar in…' : 'Logga in →'}
+            {ok ? (role === 'manager' ? 'Välkommen, Affe ✓' : 'Välkommen, Stille ✓') : busy ? 'Loggar in…' : 'Logga in →'}
           </button>
         </form>
         {msg && (

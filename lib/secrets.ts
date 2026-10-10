@@ -30,3 +30,17 @@ export async function getKey(): Promise<string | null> {
 
 export const setKey = (v: string) => admin().from('app_settings').upsert({ key: 'anthropic_api_key', value: v });
 export const delKey = async () => { invalidatePasswordCache(); await admin().from('app_settings').delete().eq('key', 'anthropic_api_key'); };
+
+// Alla tillgängliga nycklar i prioritetsordning (miljövariabel först, sedan sparad i databasen).
+// Om den första är avstängd/ogiltig provar AI-rutten nästa i stället för att ge upp.
+export async function getKeys(): Promise<string[]> {
+  const out: string[] = [];
+  const env = (process.env.ANTHROPIC_API_KEY || '').trim();
+  if (env) out.push(env);
+  try {
+    const { data } = await admin().from('app_settings').select('value').eq('key', 'anthropic_api_key').maybeSingle();
+    const db = (data?.value || '').trim();
+    if (db && !out.includes(db)) out.push(db);
+  } catch {}
+  return out;
+}

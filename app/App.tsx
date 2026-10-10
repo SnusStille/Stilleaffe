@@ -68,6 +68,43 @@ function AuditPanel({sig}:{sig:string}){const[items,setItems]=useState<any[]|nul
   const d=(v:any)=>v?`${v.sales} sälj · ${Math.round(Number(v.tb_sek)).toLocaleString('sv-SE')} kr`:'–';
   return<div className="c sc audit"><h3 style={{marginTop:0}}>Ändringshistorik</h3>{note&&<p className="sub">{note}</p>}{items===null?<p className="sub">Laddar…</p>:!items.length&&!note?<p className="sub">Inga ändringar loggade ännu.</p>:items.length>0&&<table><thead><tr><th>När</th><th>Dag</th><th>Händelse</th><th>Före</th><th>Efter</th></tr></thead><tbody>{items.map((a:any)=><tr key={a.id}><td className="num">{new Date(a.created_at).toLocaleString('sv-SE',{dateStyle:'short',timeStyle:'short'})}</td><td className="num">{a.entry_date}</td><td><span className={'tag '+(a.action==='delete'?'m':'')}>{lab[a.action]||a.action}</span></td><td className="num">{d(a.before)}</td><td className="num">{d(a.after)}</td></tr>)}</tbody></table>}</div>}
 
+
+function Ticker({items}:{items:string[]}){const row=items.map((t,i)=><span key={i}className="tk-i">{t}<em>◆</em></span>);return<div className="ticker"aria-hidden="true"><div className="tk-track">{row}{row}{row}{row}</div></div>}
+const pad2=(n:number)=>String(n).padStart(2,'0');
+const isoD=(d:Date)=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+const sv=(n:number)=>Math.round(n).toLocaleString('sv-SE');
+function ManagerReport({rows}:{rows:Row[]}){
+  const now=new Date(),dow=(now.getDay()+6)%7;
+  const mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow),pm=new Date(mon),nm=new Date(mon);
+  pm.setDate(mon.getDate()-7);nm.setDate(mon.getDate()+7);
+  const a=isoD(mon),b=isoD(pm),c=isoD(nm);
+  const cur=rows.filter(r=>r.entry_date>=a&&r.entry_date<c),prev=rows.filter(r=>r.entry_date>=b&&r.entry_date<a);
+  const S=(x:Row[])=>x.reduce((t,r)=>t+Number(r.sales||0),0),T=(x:Row[])=>x.reduce((t,r)=>t+Number(r.tb_sek||0),0);
+  const cs=S(cur),ps=S(prev),diff=ps>0?Math.round((cs-ps)/ps*100):null;
+  const from14=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-13));
+  const l14=rows.filter(r=>r.entry_date>=from14),days=new Set(l14.map(r=>r.entry_date)).size,avg=days?S(l14)/days:0;
+  const best=[...rows].sort((x,y)=>Number(y.sales)-Number(x.sales))[0];
+  const verdict=diff===null?'Ingen jämförelse än – förra veckan saknar siffror.':diff>=10?'Starkare vecka än förra. Håll i det.':diff<=-10?'Svagare vecka än förra – värt en uppföljning.':'Stabilt tempo jämfört med förra veckan.';
+  const tone=diff===null?'':diff>=0?'up':'down';
+  return<div className="mr"><div className="c mr-hero"><div className="k">Chefsrapport · denna vecka</div><div className="mr-big num">{cs} <small>sälj</small>{diff!==null&&<span className={'stat-change '+tone}>{diff>=0?'▲':'▼'} {Math.abs(diff)}%</span>}</div><p className="s">{verdict}</p></div>
+    <div className="c"><div className="k">TB denna vecka</div><div className="mr-mid num">{sv(T(cur))} kr</div><div className="s">Förra veckan: {sv(T(prev))} kr</div></div>
+    <div className="c"><div className="k">Snitt / arbetsdag (14 d)</div><div className="mr-mid num">{avg.toFixed(1)} sälj</div><div className="s">{days} dagar med registrering</div></div>
+    <div className="c"><div className="k">Bästa dag hittills</div><div className="mr-mid num">{best?Number(best.sales)+' sälj':'–'}</div><div className="s">{best?best.entry_date:'Inga registreringar än'}</div></div></div>
+}
+function MonthCal({rows}:{rows:Row[]}){
+  const[off,setOff]=useState(0);
+  const base=new Date();base.setDate(1);base.setMonth(base.getMonth()+off);
+  const y=base.getFullYear(),m=base.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,dim=new Date(y,m+1,0).getDate();
+  const pre=y+'-'+pad2(m+1),map=new Map(rows.map(r=>[r.entry_date,r]));
+  const mx=Math.max(1,...rows.filter(r=>r.entry_date.startsWith(pre)).map(r=>Number(r.sales)));
+  const tod=isoD(new Date()),tot=rows.filter(r=>r.entry_date.startsWith(pre)).reduce((t,r)=>t+Number(r.sales),0);
+  const cells:any[]=[];for(let i=0;i<first;i++)cells.push(<div key={'e'+i}className="cal-e"/>);
+  for(let d=1;d<=dim;d++){const k=pre+'-'+pad2(d),r=map.get(k),h=r?Math.max(.18,Number(r.sales)/mx):0;
+    cells.push(<div key={k}className={'cal-d'+(r?' has':'')+(k===tod?' today':'')}style={{'--h':h}as any}title={r?`${k}: ${r.sales} sälj · ${sv(Number(r.tb_sek))} kr`:k}><span>{d}</span>{r&&<b className="num">{Number(r.sales)}</b>}</div>)}
+  return<div className="c sc cal"><div className="cal-h"><button className="b ghost"onClick={()=>setOff(o=>o-1)}aria-label="Förra månaden">‹</button><div><h3 style={{margin:0,textTransform:'capitalize'}}>{base.toLocaleDateString('sv-SE',{month:'long',year:'numeric'})}</h3><div className="s">{tot} sälj totalt</div></div><div className="row"><button className="b ghost"onClick={()=>setOff(0)}>Idag</button><button className="b ghost"onClick={()=>setOff(o=>o+1)}aria-label="Nästa månad">›</button></div></div>
+    <div className="cal-g">{['M','T','O','T','F','L','S'].map((w,i)=><div key={i}className="cal-w">{w}</div>)}{cells}</div></div>
+}
+
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
@@ -77,6 +114,7 @@ export default function App(){
   const[msgs,setMsgs]=useState<Msg[]>([]);const[q,setQ]=useState('');const[busy,setBusy]=useState(false);
   const[ks,setKs]=useState<{configured:boolean;source:string|null}>({configured:false,source:null});const[keyIn,setKeyIn]=useState('');
   const can=role==='seller';
+  useEffect(()=>{document.documentElement.dataset.role=role},[role]);
   const[cm,setCm]=useState<CItem[]>([]);const[unread,setUnread]=useState(0);
   const[cText,setCText]=useState('');const[cDate,setCDate]=useState('');
   const[bell,setBell]=useState(false);const[err,setErr]=useState('');
@@ -235,7 +273,8 @@ export default function App(){
       {tab==='overview'&&<>
         <h2>{greet}, {can?'Stille':'Affe'} <span className="ok">👋</span></h2>
         <p className="sub">{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></p>
-        {!can&&<ChefBox/>}
+        <Ticker items={[`Idag: ${todayRow?Number(todayRow.sales):0} sälj`,`Månaden: ${ms} sälj`,`TB månaden: ${sv(mt)} kr`,`${streak} dagar i rad 🔥`,can?'Stille levererar':'Chefsvyn är live']}/>
+        {!can&&<><ManagerReport rows={rows}/><ChefBox/></>}
         {!rows.length?<div className="c"style={{textAlign:'center',padding:44}}><div style={{fontSize:50}}>🚀</div><h2 style={{marginTop:8}}>Dags för första registreringen</h2><p className="sub">Inga resultat än.</p>{can&&<button className="b pri"onClick={()=>setTab('register')}>Registrera dagens siffror</button>}</div>:<>
         <div className="bento">
           <div className="c hero">
@@ -351,6 +390,7 @@ export default function App(){
             {!rows.length&&<tr><td colSpan={9}className="s"style={{textAlign:'center',padding:24}}>Inga registreringar än</td></tr>}
           </tbody>
         </table></div>
+        <MonthCal rows={rows}/>
         <AuditPanel sig={rows.length+':'+ms+':'+mt}/>
       </>}
 
