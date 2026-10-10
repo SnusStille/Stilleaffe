@@ -60,6 +60,14 @@ function BarMonths({months}:{months:{label:string;sales:number;tb:number;days:nu
 type AchDef={key:string;name:string;emoji:string;desc:string};
 const ACH_MAP:Record<string,AchDef>={};ACHIEVEMENTS.forEach(a=>{ACH_MAP[a.key]=a});
 
+
+const CHEF_LINES=['Affe, du har full koll på Stilles siffror. Men låt oss vara ärliga: du övervakar huvudpersonen. Du är inte huvudpersonen. 😎','Dagens prognos: Stille fortsätter leverera. Affe fortsätter analysera.','Chefen läser. Säljaren säljer. Världen är i balans. ⚖️','Rapport från kontrollrummet: allt under kontroll, mest för att Stille har det.','Affe: 100% insyn, 0% rätt att trycka på knapparna. Så funkar demokrati. 🗳️'];
+function ChefBox(){const[i,setI]=useState(0);const[k,setK]=useState(0);return<div className="c chef"><div className="chef-h">Chefens kontrollpanel 👔</div><p key={k} className="chef-t">{CHEF_LINES[i]}</p><div className="row"><button className="b ghost"onClick={()=>{setI(v=>(v+1)%CHEF_LINES.length);setK(v=>v+1)}}>Ny kommentar 🎲</button><span className="tag">Skrivskyddad vy</span></div></div>}
+function AuditPanel({sig}:{sig:string}){const[items,setItems]=useState<any[]|null>(null);const[note,setNote]=useState('');useEffect(()=>{let on=true;fetch('/api/audit',{credentials:'same-origin'}).then(x=>x.json()).then(j=>{if(!on)return;setItems(Array.isArray(j.items)?j.items:[]);setNote(j.missing?'Historiken är inte aktiverad än – kör supabase/migration-v8.sql i Supabase SQL Editor.':'')}).catch(()=>{if(on){setItems([]);setNote('Kunde inte hämta historiken.')}});return()=>{on=false}},[sig]);
+  const lab:Record<string,string>={create:'Ny',update:'Ändrad',delete:'Borttagen'};
+  const d=(v:any)=>v?`${v.sales} sälj · ${Math.round(Number(v.tb_sek)).toLocaleString('sv-SE')} kr`:'–';
+  return<div className="c sc audit"><h3 style={{marginTop:0}}>Ändringshistorik</h3>{note&&<p className="sub">{note}</p>}{items===null?<p className="sub">Laddar…</p>:!items.length&&!note?<p className="sub">Inga ändringar loggade ännu.</p>:items.length>0&&<table><thead><tr><th>När</th><th>Dag</th><th>Händelse</th><th>Före</th><th>Efter</th></tr></thead><tbody>{items.map((a:any)=><tr key={a.id}><td className="num">{new Date(a.created_at).toLocaleString('sv-SE',{dateStyle:'short',timeStyle:'short'})}</td><td className="num">{a.entry_date}</td><td><span className={'tag '+(a.action==='delete'?'m':'')}>{lab[a.action]||a.action}</span></td><td className="num">{d(a.before)}</td><td className="num">{d(a.after)}</td></tr>)}</tbody></table>}</div>}
+
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
@@ -227,6 +235,7 @@ export default function App(){
       {tab==='overview'&&<>
         <h2>{greet}, {can?'Stille':'Affe'} <span className="ok">👋</span></h2>
         <p className="sub">{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></p>
+        {!can&&<ChefBox/>}
         {!rows.length?<div className="c"style={{textAlign:'center',padding:44}}><div style={{fontSize:50}}>🚀</div><h2 style={{marginTop:8}}>Dags för första registreringen</h2><p className="sub">Inga resultat än.</p>{can&&<button className="b pri"onClick={()=>setTab('register')}>Registrera dagens siffror</button>}</div>:<>
         <div className="bento">
           <div className="c hero">
@@ -342,6 +351,7 @@ export default function App(){
             {!rows.length&&<tr><td colSpan={9}className="s"style={{textAlign:'center',padding:24}}>Inga registreringar än</td></tr>}
           </tbody>
         </table></div>
+        <AuditPanel sig={rows.length+':'+ms+':'+mt}/>
       </>}
 
       {tab==='stats'&&<>

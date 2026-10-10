@@ -51,10 +51,12 @@ export default function Login() {
 
   return (
     <div className="center">
+      <div className="lgorbs" aria-hidden><i /><i /><i /></div>
+      <div className="lggrid" aria-hidden />
       <div className="lg">
-        <div className="lgmark" aria-hidden>S</div>
-        <h1>Säljdashboard</h1>
-        <p className="s">Privat uppföljning för Stille &amp; Affe</p>
+        <div className="cubewrap" aria-hidden><div className="cube"><b>S</b><b>S</b><b>S</b><b>S</b><b /><b /></div></div>
+        <h1>Stilleaffe</h1>
+        <p className="s">Säljuppföljning för Stille &amp; Affe</p>
         <form method="post" action="/api/login" onSubmit={onSubmit} noValidate>
           <input type="hidden" name="role" value={role} />
           <div className="seg" role="tablist" aria-label="Välj roll">

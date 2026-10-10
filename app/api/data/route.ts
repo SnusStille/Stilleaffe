@@ -27,6 +27,13 @@ export async function GET(req: Request) {
   }
 }
 
+async function audit(sb: any, entry_date: string, action: 'create' | 'update' | 'delete', before: any, after: any) {
+  try {
+    const pick = (r: any) => r ? { sales: r.sales, tb_sek: r.tb_sek, hours: r.hours ?? null, note: r.note ?? null, mood: r.mood ?? null, rating: r.rating ?? null, tags: r.tags ?? [] } : null;
+    await sb.from('sales_audit').insert({ entry_date, action, author: 'seller', before: pick(before), after: pick(after) });
+  } catch {}
+}
+
 async function logEvent(sb: any, author: string, event: string, payload: any = {}) {
   try { await sb.from('activity_log').insert({ author, event, payload }); } catch {}
 }
@@ -54,6 +61,8 @@ export async function POST(req: Request) {
     };
     const { error } = await sb.from('sales_entries').upsert(values, { onConflict: 'entry_date' });
     if (error) return err(error.message, 500);
+    const changed = !existed.data || ['sales', 'tb_sek', 'hours', 'note', 'mood', 'rating'].some(k => String((existed.data as any)[k] ?? '') !== String((values as any)[k] ?? ''));
+    if (changed) await audit(sb, b.entry_date, existed.data ? 'update' : 'create', existed.data, values);
     if (b.replace_id) await sb.from('sales_entries').delete().eq('id', Number(b.replace_id)).neq('entry_date', b.entry_date);
     // events
     const prevSales = existed.data?.sales || 0;
@@ -63,7 +72,9 @@ export async function POST(req: Request) {
   }
   if (b.action === 'delete') {
     if (!Number.isInteger(Number(b.id))) return err('Ogiltigt id');
+    const old = await sb.from('sales_entries').select('*').eq('id', Number(b.id)).maybeSingle();
     await sb.from('sales_entries').delete().eq('id', Number(b.id));
+    if (old.data) await audit(sb, old.data.entry_date, 'delete', old.data, null);
     return NextResponse.json({ ok: true });
   }
   if (b.action === 'goals') {

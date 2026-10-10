@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/secrets';
-import { token, pwFor, invalidatePasswordCache } from '@/lib/auth';
-import { AUTH_COOKIE, AUTH_VERSION } from '../../../middleware';
+import { token, pwFor, invalidatePasswordCache, AUTH_COOKIE, AUTH_VERSION } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 

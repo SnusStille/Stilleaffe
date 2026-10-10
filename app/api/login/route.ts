@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { token, invalidatePasswordCache, pwFor } from '@/lib/auth';
-import { AUTH_VERSION, AUTH_COOKIE } from '../../../middleware';
+import { token, invalidatePasswordCache, pwFor, AUTH_VERSION, AUTH_COOKIE } from '@/lib/auth';
 
 const tries = new Map<string, { count: number; until: number }>();
 const MAX_TRIES = 10;

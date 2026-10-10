@@ -15,7 +15,8 @@ export async function POST(req: Request) {
   const now = Date.now(), h = (hits.get(role) || []).filter(t => now - t < 600000);
   if (h.length >= 20) return NextResponse.json({ error: 'För många frågor – vänta en stund.' }, { status: 429 });
   h.push(now); hits.set(role, h);
-  const key = await getKey();
+  let key: string | null = null;
+  try { key = await getKey(); } catch { key = null; }
   if (!key) return NextResponse.json({ error: 'AI är inte aktiverad. Lägg in API-nyckeln i AI-fliken.' }, { status: 503 });
 
   let body: any = {}; try { body = await req.json(); } catch {}
@@ -23,7 +24,9 @@ export async function POST(req: Request) {
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   if (!msgs.length || msgs[msgs.length - 1].role !== 'user') return NextResponse.json({ error: 'Skriv en fråga.' }, { status: 400 });
 
-  const sb = admin(), since = iso(new Date(now - 60 * 864e5));
+  let sb: ReturnType<typeof admin>;
+  try { sb = admin(); } catch (e: any) { return NextResponse.json({ error: 'Databasen är inte korrekt kopplad: ' + (e?.message || 'okänt fel') }, { status: 500 }); }
+  const since = iso(new Date(now - 60 * 864e5));
   const [rows, g, cm] = await Promise.all([
     sb.from('sales_entries').select('entry_date,sales,tb_sek,hours,note').gte('entry_date', since).order('entry_date'),
     sb.from('goals').select('daily_sales,daily_tb,weekly_sales,weekly_tb,monthly_sales,monthly_tb').eq('id', 1).maybeSingle(),
@@ -48,7 +51,7 @@ export async function POST(req: Request) {
         messages: msgs,
       }),
     });
-    if (!r.ok) return NextResponse.json({ error: r.status === 401 ? 'API-nyckeln är ogiltig.' : r.status === 429 ? 'Anthropic begränsar anropen just nu – försök igen strax.' : `AI är inte tillgänglig just nu (${r.status}).` }, { status: 502 });
+    if (!r.ok) return NextResponse.json({ error: r.status === 401 ? 'API-nyckeln är ogiltig.' : r.status === 429 ? 'Anthropic begränsar anropen just nu – försök igen strax.' : `AI-anropet misslyckades (${r.status}). Kontrollera ANTHROPIC_MODEL och nyckeln.` }, { status: 502 });
     const j = await r.json(), blocks: any[] = j.content || [];
     const text = blocks.filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
     const proposals = blocks.filter(c => c.type === 'tool_use' && tools.some(t => t.name === c.name)).map(c => ({ tool: c.name, input: c.input }));

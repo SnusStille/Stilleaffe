@@ -1,8 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { token, pwFor } from '@/lib/auth';
-
-export const AUTH_COOKIE = 'sd_auth';
-export const AUTH_VERSION = "v7";
+import { token, pwFor, AUTH_COOKIE, AUTH_VERSION } from '@/lib/auth';
 
 function isOpen(p: string): boolean {
   return (

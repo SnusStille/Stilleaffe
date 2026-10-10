@@ -432,3 +432,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(max-width:480px){.mood-stat{grid-template-columns:78px 1fr 20px;font-size:12px}.tag-stat{grid-template-columns:1fr 45px 68px;gap:5px}.bar-chart.h .bar-row{grid-template-columns:85px 1fr 62px;gap:6px}.bar-chart.h .bar-row .val{font-size:11px}}
 .g>.c,.two>.c,.three>.c{margin-top:0}
 .seg-theme button>span{display:grid!important;place-items:center;min-height:48px;font-size:20px;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+
+/* v8: chefspanel + ändringshistorik */
+.chef{background:linear-gradient(135deg,color-mix(in srgb,var(--g2) 16%,transparent),color-mix(in srgb,var(--g1) 8%,transparent));border-color:color-mix(in srgb,var(--g2) 35%,transparent);margin-bottom:16px}
+.chef-h{font-weight:800;font-size:17px;margin-bottom:6px}
+.chef-t{margin:0 0 12px;color:var(--mu);line-height:1.5;animation:in .4s var(--eio) both}
+.audit{margin-top:16px}
+.audit table{width:100%}

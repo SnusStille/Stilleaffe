@@ -3,6 +3,9 @@ import { getSupabaseAdminConfig, validateSupabaseAdminKey } from '@/lib/supabase
 
 export type Role = 'seller' | 'manager';
 
+export const AUTH_COOKIE = 'sd_auth';
+export const AUTH_VERSION = 'v7';
+
 // Hämtar lösenord – först från DB (app_settings) om användaren bytt,
 // sedan från ENV. Trimmar och returnerar undefined om lösenordet är tomt.
 function adminClient() {
