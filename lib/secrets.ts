@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase-shim';
 import { invalidatePasswordCache } from '@/lib/auth';
-
-const base = (u?: string) => {
-  try { return new URL((u || '').trim()).origin; } catch { return (u || '').trim(); }
-};
+import { getSupabaseAdminConfig, validateSupabaseAdminKey } from '@/lib/supabase-config';
 
 export const admin = () => {
-  const url = base(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  return createClient(url, key, { auth: { persistSession: false } });
+  const { url, key } = getSupabaseAdminConfig();
+  const keyProblem = validateSupabaseAdminKey(key);
+  if (keyProblem) throw new Error(keyProblem);
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
 };
 
 export async function keyStatus(): Promise<{ configured: boolean; source: 'env' | 'db' | null }> {

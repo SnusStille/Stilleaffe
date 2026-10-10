@@ -197,3 +197,4 @@ export function greeting(): string {
   if (hr < 23) return 'God kväll';
   return 'God natt';
 }
+

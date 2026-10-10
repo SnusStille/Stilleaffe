@@ -1,18 +1,16 @@
 import { createClient } from '@/lib/supabase-shim';
+import { getSupabaseAdminConfig, validateSupabaseAdminKey } from '@/lib/supabase-config';
 
 export type Role = 'seller' | 'manager';
 
 // Hämtar lösenord – först från DB (app_settings) om användaren bytt,
 // sedan från ENV. Trimmar och returnerar undefined om lösenordet är tomt.
-const base = (u?: string) => {
-  try { return new URL((u || '').trim()).origin; } catch { return (u || '').trim(); }
-};
-
 function adminClient() {
-  const url = base(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  if (!url || !/^https?:\/\//.test(url)) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  const { url, key } = getSupabaseAdminConfig();
+  if (!url || !/^https?:\/\//.test(url) || validateSupabaseAdminKey(key)) return null;
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
 }
 
 let _dbCache: Record<string, string> | null = null;

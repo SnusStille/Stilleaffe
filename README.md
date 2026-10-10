@@ -4,6 +4,8 @@ Privat svensk säljuppföljning för Stille & Affe. Next.js 14 + Supabase, med s
 
 ## Snabbstart lokalt
 
+Använd Node.js 22.x.
+
 1. `npm install`
 2. Kopiera `.env.example` till `.env.local` och fyll i variablerna en och en.
 3. Kör `supabase/schema.sql` i Supabase Dashboard → SQL Editor.
@@ -34,8 +36,8 @@ Appen behöver dessa servervariabler:
 - `MANAGER_PASSWORD`
 - `SESSION_SECRET` (minst 32 slumpmässiga tecken rekommenderas)
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY` (kan innehålla ny Supabase `sb_secret_...`-nyckel eller legacy `service_role` JWT)
+- `SUPABASE_SECRET_KEY` (föredragen, `sb_secret_...`) **eller** befintliga `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` JWT); om båda sätts prioriteras `SUPABASE_SECRET_KEY`
 - `ANTHROPIC_API_KEY` (valfri om AI inte ska användas)
 - `ANTHROPIC_MODEL=claude-sonnet-5-5`
 
-`SUPABASE_SERVICE_ROLE_KEY` är ett server-only variabelnamn i appen. Lägg aldrig den nyckeln i en `NEXT_PUBLIC_...` variabel eller i klientkod.
+Endast en servernyckel med rätt projekt får användas: en `sb_secret_...` eller legacy JWT med `role=service_role`. `anon`/`sb_publishable_...` fungerar inte som adminnycklar. Lägg aldrig någon servernyckel i en `NEXT_PUBLIC_...`-variabel eller i klientkod.

@@ -51,8 +51,42 @@ create table if not exists public.goals (
 );
 alter table public.goals add column if not exists weekly_sales integer default 35;
 alter table public.goals add column if not exists weekly_tb numeric(12,2) default 15000;
+-- CREATE TABLE IF NOT EXISTS does not add columns to an older existing goals table.
+alter table public.goals add column if not exists id integer;
+-- Give legacy rows stable IDs; the app reads the main goals row as id=1.
+DO $$
+DECLARE
+  next_id integer;
+  goal_row record;
+  pk_name text;
+BEGIN
+  -- Older app versions may have used a required user_id; v7 has one shared goal row.
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'goals' AND column_name = 'user_id'
+  ) THEN
+    SELECT c.conname INTO pk_name
+    FROM pg_constraint c
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+    WHERE c.conrelid = 'public.goals'::regclass AND c.contype = 'p' AND a.attname = 'user_id'
+    LIMIT 1;
+    IF pk_name IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE public.goals DROP CONSTRAINT %I', pk_name);
+    END IF;
+    EXECUTE 'ALTER TABLE public.goals ALTER COLUMN user_id DROP NOT NULL';
+  END IF;
+
+  SELECT COALESCE(MAX(id), 0) INTO next_id FROM public.goals;
+  FOR goal_row IN SELECT ctid FROM public.goals WHERE id IS NULL ORDER BY ctid LOOP
+    next_id := next_id + 1;
+    UPDATE public.goals SET id = next_id WHERE ctid = goal_row.ctid;
+  END LOOP;
+END $$;
+alter table public.goals alter column id set not null;
+create unique index if not exists goals_id_unique_idx on public.goals(id);
 -- Seed only when missing; preserve the user's chosen goals on reruns.
-insert into public.goals (id) values (1) on conflict (id) do nothing;
+insert into public.goals (id, daily_sales, daily_tb, weekly_sales, weekly_tb, monthly_sales, monthly_tb)
+values (1, 7, 3000, 35, 15000, 140, 60000) on conflict (id) do nothing;
 update public.goals set weekly_sales = 35 where weekly_sales is null;
 update public.goals set weekly_tb = 15000 where weekly_tb is null;
 
@@ -104,6 +138,16 @@ alter table public.comments enable row level security;
 alter table public.activity_log enable row level security;
 alter table public.achievements enable row level security;
 revoke all on public.sales_entries, public.goals, public.app_settings, public.comments, public.activity_log, public.achievements from anon, authenticated;
+
+-- Servern använder service_role. Ge den uttryckliga tabell- och sekvensrättigheter;
+-- RLS är fortfarande aktiverat, och anon/authenticated har inga rättigheter.
+grant usage on schema public to service_role;
+grant all privileges on table public.sales_entries, public.goals, public.app_settings, public.comments, public.activity_log, public.achievements to service_role;
+grant usage, select on all sequences in schema public to service_role;
+
+-- Säkerställ samma rättigheter på tabeller/sekvenser som skapas senare.
+alter default privileges in schema public grant all privileges on tables to service_role;
+alter default privileges in schema public grant usage, select on sequences to service_role;
 
 -- Index
 create index if not exists sales_entry_date_idx on public.sales_entries(entry_date desc);

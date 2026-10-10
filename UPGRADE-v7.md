@@ -2,7 +2,7 @@
 
 ## Innan du börjar
 
-V7 har byggts och typkontrollerats med `npx next build`. Inga nya miljövariabler tillkommer; `ANTHROPIC_MODEL=claude-sonnet-5-5` är kvar. Uppgraderingen lägger till v7-kolumner/tabeller men behåller befintliga säljregistreringar och dina sparade mål. SQL-filen kan köras flera gånger.
+V7 använder `@supabase/supabase-js` 2.117.3 för att stödja Supabase `sb_secret_`-nycklar och kräver därför Node.js 22.x i Vercel. Inga nya miljövariabler krävs: `SUPABASE_SECRET_KEY` är ett valfritt alias som prioriteras om det är satt; annars används befintliga `SUPABASE_SERVICE_ROLE_KEY`. `ANTHROPIC_MODEL=claude-sonnet-5-5` är kvar. Uppgraderingen lägger till v7-kolumner/tabeller men behåller befintliga säljregistreringar och dina sparade mål. SQL-filen kan köras flera gånger.
 
 ## 1. Kör SQL-migreringen
 
@@ -11,19 +11,17 @@ V7 har byggts och typkontrollerats med `npx next build`. Inga nya miljövariable
 3. Öppna `supabase/schema.sql` från v7-paketet, kopiera hela filen och klistra in i SQL Editor.
 4. Kör queryn och kontrollera att den avslutas utan fel.
 
-Den uppdaterar bland annat humör/rating/taggar, veckomål, aktivitetsflöde, kommentarer (reaktioner/pinning) och märken. Den behåller nuvarande mål vid omkörning.
+Den uppdaterar bland annat humör/rating/taggar, veckomål, aktivitetsflöde, kommentarer (reaktioner/pinning) och märken. Den behåller nuvarande mål vid omkörning, lägger till `goals.id` om den saknas och hanterar äldre `goals.user_id`-kolumner genom att göra dem valfria för v7. Om en tidigare körning stannade på `column "id" of relation "goals" does not exist`, ersätt SQL-filen med denna v7-version och kör hela filen igen.
 
-## 2. Uppdatera Supabase-nyckeln
+## 2. Välj rätt Supabase-servernyckel
 
-**Viktigt:** `Unregistered API key` betyder oftast att nyckeln är fel/avklippt eller kommer från ett annat Supabase-projekt än URL:en. URL och nyckel måste komma från samma projekt.
-
-Rekommenderat nyckelflöde i Supabase nu:
+**Viktigt:** En env-flagga som säger att nyckeln finns bekräftar inte att nyckeltypen är rätt. `anon`/`sb_publishable_` är inte adminnycklar. URL och nyckel måste komma från samma Supabase-projekt.
 
 1. Supabase Dashboard → rätt projekt → **Settings → API Keys**.
-2. Under **Secret keys**, skapa/kopiera en servernyckel som börjar `sb_secret_`.
-3. Kopiera hela värdet (inte `sb_publishable_...`). `sb_secret_...` är en riktig servernyckel när den har skapats i det projektet och ska hållas hemlig.
-4. Den äldre **service_role**-nyckeln i JWT-format (`eyJ...`) stöds också. För den ska du kopiera hela `service_role`-värdet.
-5. Kontrollera att **Project URL** matchar `NEXT_PUBLIC_SUPABASE_URL` i Vercel. Lägg aldrig secret/service_role-nyckeln i en `NEXT_PUBLIC_...`-variabel.
+2. Rekommenderat: under **Secret keys**, skapa/kopiera en servernyckel som börjar `sb_secret_`.
+3. Alternativt stöds den äldre **service_role**-nyckeln i JWT-format (`eyJ...`), men dess JWT-roll måste vara `service_role` — inte `anon`.
+4. I den här appversionen ska den nya nyckeln ligga i `SUPABASE_SECRET_KEY`; den äldre JWT kan ligga i `SUPABASE_SERVICE_ROLE_KEY`. Om båda är satta används `SUPABASE_SECRET_KEY`.
+5. Kontrollera att **Project URL** matchar `NEXT_PUBLIC_SUPABASE_URL`. Lägg aldrig secret/service_role-nyckeln i en `NEXT_PUBLIC_...`-variabel och dela aldrig värdet i chatt eller supportärenden.
 
 Officiell referens: https://supabase.com/docs/guides/getting-started/api-keys
 
@@ -31,22 +29,22 @@ Officiell referens: https://supabase.com/docs/guides/getting-started/api-keys
 
 Öppna Vercel → projektet → **Settings → Environment Variables**. Lägg till eller uppdatera varje variabel separat; välj rätt miljö (Production och gärna Preview). Kolla att stavningen i **Key** är exakt:
 
-1. **Key:** `NEXT_PUBLIC_SUPABASE_URL`
+1. **Key:** `NEXT_PUBLIC_SUPABASE_URL`  
    **Value:** Project URL från samma Supabase-projekt, exempelvis `https://<project-ref>.supabase.co`.
-2. **Key:** `SUPABASE_SERVICE_ROLE_KEY`
-   **Value:** hela nya `sb_secret_...`-nyckeln (rekommenderas), eller hela legacy `service_role`-JWT:n (`eyJ...`). Variabelnamnet är appens server-side inställning; hemligheten får inte exponeras till webbläsaren.
-3. **Key:** `SELLER_PASSWORD`
+2. **Rekommenderat Key:** `SUPABASE_SECRET_KEY`  
+   **Value:** hela `sb_secret_...`-nyckeln från samma Supabase-projekt. Alternativt kan du behålla `SUPABASE_SERVICE_ROLE_KEY` med hela legacy `service_role`-JWT:n (`eyJ...`). Om båda finns används `SUPABASE_SECRET_KEY`. Använd aldrig `anon`/`sb_publishable_...`; nyckeln är endast server-side.
+3. **Key:** `SELLER_PASSWORD`  
    **Value:** ditt befintliga starka säljar-lösenord.
-4. **Key:** `MANAGER_PASSWORD`
+4. **Key:** `MANAGER_PASSWORD`  
    **Value:** ditt befintliga starka chefslösenord.
-5. **Key:** `SESSION_SECRET`
+5. **Key:** `SESSION_SECRET`  
    **Value:** en slumpmässig hemlighet på minst 32 tecken. Behåll den befintliga om den inte har läckt; ändra den roterar alla inloggningssessioner.
-6. **Key:** `ANTHROPIC_API_KEY`
+6. **Key:** `ANTHROPIC_API_KEY`  
    **Value:** din Anthropic API-nyckel. Valfri om AI inte ska användas.
-7. **Key:** `ANTHROPIC_MODEL`
+7. **Key:** `ANTHROPIC_MODEL`  
    **Value:** `claude-sonnet-5-5` — behåll exakt detta modellnamn.
 
-Ta bort gammal `SUPABASE_SERVICE_ROLE_KEY`-rad först om Vercel annars skapar dubbletter. Spara ändringen för **Production**; upprepa även för Preview om du använder preview-deployments.
+Använd helst endast en av nyckelvariablerna, så det inte blir oklart vilken som är aktiv. Om båda är satta prioriterar koden `SUPABASE_SECRET_KEY`. Kontrollera även Vercel → **Settings → General → Node.js Version** och välj **22.x**. Spara ändringen för **Production**; upprepa även för Preview om du använder preview-deployments.
 
 ## 4. Ersätt kod och pusha
 
@@ -68,15 +66,16 @@ Om du väljer **Redeploy** manuellt: öppna Deployment → menyn med tre prickar
 
 Efter deploy:
 
-1. Öppna `/api/health`. Kontrollera `v: "v7"` och att `db: "ok"`.
-2. Logga in. V7 använder ny auth-version; logga in igen om den gamla sessionen inte längre fungerar.
-3. Registrera en testdag och kontrollera aktivitet, märken, kommentarer och statistik. Ta sedan bort testdagen om du inte vill behålla den.
+1. Öppna `/api/health`. Svaret är nu dynamiskt och `no-store` (inte en build-time snapshot). Kontrollera `adminKey.source`/`adminKey.type`, `db: "ok"` samt `dbProbes.sales_entries: "ok"`. Svaret klassificerar endast nyckeltypen/rollen och innehåller aldrig själva nyckeln. Proben är read-only och bekräftar SELECT — den utför inga INSERT/UPDATE/DELETE-tester.
+2. Om `sales_entries` visar fel, spara endast feltexten och `adminKey.type` — dela aldrig någon nyckel. Kontrollera sedan att Vercel Production har rätt nyckel för samma projekt och gör en ny deployment.
+3. Logga in. V7 använder ny auth-version; logga in igen om den gamla sessionen inte längre fungerar.
+4. Registrera en testdag och kontrollera aktivitet, märken, kommentarer och statistik. Ta sedan bort testdagen om du inte vill behålla den.
 
 ## 6. Rotera hemligheter som tidigare exponerats
 
 När du har bekräftat att den nya deploymenten fungerar:
 
-- Skapa en ny Supabase Secret key, uppdatera Vercel `SUPABASE_SERVICE_ROLE_KEY`, testa appen, och först därefter ta bort den gamla nyckeln.
+- Skapa en ny Supabase Secret key, uppdatera Vercel `SUPABASE_SECRET_KEY` (eller den enda nyckelvariabel du valt), testa appen, och först därefter ta bort den gamla nyckeln.
 - Rotera Anthropic-nyckeln i Anthropic Console och uppdatera `ANTHROPIC_API_KEY` i Vercel.
 - Byt säljar- och chefslösenord om de har synts i GitHub eller chatt.
 - Rensa/ta bort läckta nycklar från publika commits där möjligt. En roterad nyckel ska ändå betraktas som komprometterad.
@@ -93,4 +92,4 @@ När du har bekräftat att den nya deploymenten fungerar:
 
 ## Lokalt
 
-Kopiera `.env.example` till `.env.local`, fyll i värdena, kör `npm install`, kör SQL-schemat i Supabase och starta med `npm run dev`. Kör `npm run build` före deploy vid behov.
+Använd Node.js 22.x. Kopiera `.env.example` till `.env.local`, fyll i värdena, kör `npm install`, kör SQL-schemat i Supabase och starta med `npm run dev`. Kör `npm run build` före deploy vid behov.
