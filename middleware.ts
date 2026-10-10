@@ -1,38 +1,79 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { token, pwFor } from '@/lib/auth';
 
+export const AUTH_COOKIE = 'sd_auth';
+export const AUTH_VERSION = 'v5';
+
+function isOpen(p: string): boolean {
+  return (
+    p === '/login' ||
+    p === '/api/login' ||
+    p === '/api/logout' ||
+    p === '/api/health' ||
+    p === '/favicon.ico' ||
+    p.startsWith('/_next/') ||
+    p.startsWith('/icon') ||
+    p.startsWith('/manifest')
+  );
+}
+
 export async function middleware(req: NextRequest) {
   try {
-    const p = req.nextUrl.pathname;
-    const open = p.startsWith('/login') || p === '/api/login' || p === '/api/health';
-    // Tillåt statiska resurser (Next hanterar dem via matcher nedan men gör ett explicit skydd här).
-    const cookieVal = req.cookies.get('sd_auth')?.value || '';
-    const dot = cookieVal.indexOf('.');
-    const role = dot > 0 ? cookieVal.slice(0, dot) : '';
-    const hash = dot > 0 ? cookieVal.slice(dot + 1) : '';
-    const pw = pwFor(role);
+    const { pathname: p } = req.nextUrl;
+
+    const cookieVal = req.cookies.get(AUTH_COOKIE)?.value || '';
+    const vDot = cookieVal.indexOf('.');
+    const ver = vDot > 0 ? cookieVal.slice(0, vDot) : '';
+    const rest = vDot > 0 ? cookieVal.slice(vDot + 1) : '';
+    const rDot = rest.indexOf('.');
+    const role = rDot > 0 ? rest.slice(0, rDot) : '';
+    const hash = rDot > 0 ? rest.slice(rDot + 1) : '';
+
     let ok = false;
-    try {
-      // Vik token(..) i en egen try/catch så att ett kastat fel här inte tar hela mittendelen.
-      ok = !!pw && !!hash && hash === (await token(pw, role));
-    } catch { ok = false; }
-    if (!ok && !open) {
-      return p.startsWith('/api')
-        ? NextResponse.json({ error: 'Inte inloggad' }, { status: 401 })
-        : NextResponse.redirect(new URL(cookieVal ? '/login?e=session' : '/login', req.url));
+    let loggedInRole: '' | 'seller' | 'manager' = '';
+    if (ver === AUTH_VERSION && (role === 'seller' || role === 'manager')) {
+      const pw = await pwFor(role); // V5: async (kan läsa från DB)
+      if (pw && hash) {
+        try {
+          const want = await token(pw, role);
+          if (want === hash) { ok = true; loggedInRole = role; }
+        } catch { ok = false; }
+      }
     }
-    if (ok && p.startsWith('/login')) return NextResponse.redirect(new URL('/', req.url));
+
+    if (ok && p === '/login') {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+
+    if (isOpen(p)) {
+      const h = new Headers(req.headers);
+      if (ok) h.set('x-role', loggedInRole);
+      return NextResponse.next({ request: { headers: h } });
+    }
+
+    if (!ok) {
+      if (p.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Inte inloggad' }, { status: 401 });
+      }
+      const dest = new URL('/login', req.url);
+      if (cookieVal) dest.searchParams.set('e', 'session');
+      return NextResponse.redirect(dest);
+    }
+
     const h = new Headers(req.headers);
-    h.delete('x-role');
-    if (ok) h.set('x-role', role); // alltid överskriven av servern
+    h.set('x-role', loggedInRole);
     return NextResponse.next({ request: { headers: h } });
   } catch (err: any) {
     console.error('[middleware]', err);
-    // Vid totalt fel: skicka vidare som ogiltig session istället för krasch-loop.
-    if (req.nextUrl.pathname.startsWith('/api')) {
+    if (req.nextUrl.pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Serverfel' }, { status: 500 });
     }
-    return NextResponse.redirect(new URL('/login?e=server', req.url));
+    const dest = new URL('/login', req.url);
+    dest.searchParams.set('e', 'server');
+    return NextResponse.redirect(dest);
   }
 }
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)'] };
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)'],
+};

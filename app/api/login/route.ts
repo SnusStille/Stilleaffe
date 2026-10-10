@@ -1,27 +1,59 @@
 import { NextResponse } from 'next/server';
-import { token, pwFor } from '@/lib/auth';
-const tries = new Map<string, number[]>();
+import { token, invalidatePasswordCache, pwFor } from '@/lib/auth';
+import { AUTH_VERSION, AUTH_COOKIE } from '../../../middleware';
 
-// Fungerar med vanlig formulärpost (utan JavaScript) och med JSON.
+const tries = new Map<string, { count: number; until: number }>();
+const MAX_TRIES = 10;
+const WINDOW_MS = 10 * 60 * 1000;
+
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   const isForm = !(req.headers.get('content-type') || '').includes('json');
-  const back = (e: string, status: number) => isForm ? NextResponse.redirect(new URL('/login?e=' + e, req.url), 303) : NextResponse.json({ error: e }, { status });
+  const back = (e: string, status: number) =>
+    isForm
+      ? NextResponse.redirect(new URL('/login?e=' + encodeURIComponent(e), req.url), 303)
+      : NextResponse.json({ error: e }, { status });
   try {
-    const ip = (req.headers.get('x-forwarded-for') || 'x').split(',')[0], now = Date.now(), t = (tries.get(ip) || []).filter(x => now - x < 600000);
-    if (t.length >= 8) return back('rate', 429);
-    let role = 'seller', password = '';
+    invalidatePasswordCache();
+    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+    const now = Date.now();
+    let lim = tries.get(ip);
+    if (!lim || lim.until < now) lim = { count: 0, until: now + WINDOW_MS };
+    if (lim.count >= MAX_TRIES) return back('rate', 429);
+
+    let roleIn = 'seller', passwordIn = '';
     try {
-      if (isForm) { const f = await req.formData(); role = String(f.get('role') || ''); password = String(f.get('password') || ''); }
-      else { const b = await req.json(); role = String(b.role || ''); password = String(b.password || ''); }
+      const ct = req.headers.get('content-type') || '';
+      if (ct.includes('json')) {
+        const b = await req.json();
+        roleIn = String(b?.role || 'seller');
+        passwordIn = String(b?.password || '');
+      } else {
+        const f = await req.formData();
+        roleIn = String(f.get('role') || 'seller');
+        passwordIn = String(f.get('password') || '');
+      }
     } catch { return back('bad', 400); }
-    role = role === 'manager' ? 'manager' : 'seller';
-    const pw = pwFor(role);
-    if (!pw) return back('missing', 500);
-    if (!password) return back('pw', 401); // tomt lösen → snabb 401 istället för krasch
+
+    const role: 'seller' | 'manager' = roleIn === 'manager' ? 'manager' : 'seller';
+    const password = (passwordIn || '').trim();
+    if (!password) return back('pw', 401);
+
+    const pw = await pwFor(role);
+    if (!pw) { console.error('[login] saknar lösenord för', role); return back('missing', 500); }
     const [got, want] = await Promise.all([token(password, role), token(pw, role)]);
-    if (got !== want) { t.push(now); tries.set(ip, t); return back('pw', 401); }
-    const res = isForm ? NextResponse.redirect(new URL('/', req.url), 303) : NextResponse.json({ ok: true });
-    res.cookies.set('sd_auth', `${role}.${want}`, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 30 });
+    if (got !== want) { lim.count += 1; tries.set(ip, lim); return back('pw', 401); }
+
+    tries.delete(ip);
+    const cookieVal = `${AUTH_VERSION}.${role}.${want}`;
+    const isProd = process.env.NODE_ENV === 'production';
+    const res = isForm
+      ? NextResponse.redirect(new URL('/', req.url), 303)
+      : NextResponse.json({ ok: true });
+    res.cookies.set(AUTH_COOKIE, cookieVal, {
+      httpOnly: true, sameSite: 'lax', secure: isProd, path: '/', maxAge: 60 * 60 * 24 * 30,
+    });
     return res;
   } catch (err: any) {
     console.error('[login]', err);

@@ -40,7 +40,13 @@ export async function POST(req: Request) {
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', max_tokens: 700, system, tools, messages: msgs }),
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+        max_tokens: 700,
+        system,
+        tools,
+        messages: msgs,
+      }),
     });
     if (!r.ok) return NextResponse.json({ error: r.status === 401 ? 'API-nyckeln är ogiltig.' : r.status === 429 ? 'Anthropic begränsar anropen just nu – försök igen strax.' : `AI är inte tillgänglig just nu (${r.status}).` }, { status: 502 });
     const j = await r.json(), blocks: any[] = j.content || [];
