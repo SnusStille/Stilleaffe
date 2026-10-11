@@ -12,7 +12,7 @@ Utgångspunkt: den befintliga privata StilleAffe-inloggningen och dess seller/ma
 6. **Lösenordsfält med tydlighet:** synlig låsikon, större klickyta för visa/dölj, `current-password`, `aria-invalid` och kopplad hjälpläsning.
 7. **Fokus och kontrast:** tydliga `:focus-visible`-ringar och aktivt fältläge; fokusera lösenordsfältet på desktop men öppna inte mobilens tangentbord automatiskt.
 8. **Ärlig feedback:** separat fel-/statusruta, fel lösenord fokuseras igen, uppladdning har text och spinner, lyckad inloggning får en kort bekräftelse innan befintlig omdirigering.
-9. **Avsiktlig rörelse:** korta övergångar, ingen ständig blinkning eller autoplay; `prefers-reduced-motion` stänger av animationer.
+9. **Avsiktlig rörelse:** långsam kameradrift och ett mjukt ljusstråk i hero-bilden, korta övergångar i formuläret, ingen blinkning; `prefers-reduced-motion` stänger av animationerna.
 10. **Mobilanpassning:** hero och formulär staplas, bilden beskärs om utan externa resurser och valen/knapparna behåller touchvänliga mål.
 
 ## Verifierat
@@ -20,3 +20,9 @@ Utgångspunkt: den befintliga privata StilleAffe-inloggningen och dess seller/ma
 - `tsc --noEmit` och `npm run build` passerade efter redesignen.
 - `/login` returnerar 200 och den optimerade hero-bilden returnerar 200 (`image/jpeg` via Next Image-optimering).
 - Autentisering mot riktiga credentials/Supabase är inte verifierad i denna arbetsmiljö utan hemligheter.
+
+## Mål och dashboardrörelse — v20
+
+- Säljaren och Affe får nu en gemensam, tydlig målkortsyta högst upp på Översikt. Affe ser Stilles dagsmål stort, dagens faktiska registrering (eller tydligt “Ej registrerat”), samt TB-, vecko- och månadsmål i samma kort. Kortet är skrivskyddat för Affe.
+- Säljaren kan öppna Mål direkt från målkortet. Målredigeringen är grupperad i **Dagsmål**, **Veckomål** och **Månadsmål**, med förklarande etiketter, enheter och separat sparaåtgärd.
+- Båda rollernas vyer får en kort, fördröjd entré och diskret 3D-/hoverdjup; målkortets volymstapel och befintliga 3D-veckodiagram står för djupet. `prefers-reduced-motion` stänger av rörelsen.

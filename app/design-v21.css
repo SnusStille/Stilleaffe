@@ -1,0 +1,391 @@
+/*
+  StilleAffe v21 · 10 design additions
+  Visual-only polish: no data, roles, permissions, or authentication changes.
+  Depth is restrained, hover-led, and disabled for reduced-motion users.
+*/
+
+/* 01 — A soft, dimensional studio backdrop behind the dashboard. */
+.app::before {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  opacity: .72;
+  background:
+    radial-gradient(760px 540px at 7% 3%, color-mix(in srgb, var(--gr) 8%, transparent), transparent 72%),
+    radial-gradient(680px 520px at 91% 21%, color-mix(in srgb, var(--acc2) 7%, transparent), transparent 73%),
+    radial-gradient(900px 620px at 44% 100%, rgba(76,104,136,.045), transparent 70%),
+    linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px);
+  background-size: auto, auto, auto, 72px 72px, 72px 72px;
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.7) 60%, transparent 100%);
+}
+.app > aside { z-index: 4; }
+.app > main { z-index: 3; }
+
+/* 02 — A floating, layered navigation rail. */
+.app > aside {
+  overflow: hidden;
+  isolation: isolate;
+  border-color: color-mix(in srgb, var(--gr) 12%, var(--bd));
+  background: linear-gradient(158deg, #11171c 0%, #0b0f13 42%, #090c10 100%) !important;
+  box-shadow: 14px 22px 48px -34px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.055), inset -1px 0 0 rgba(255,255,255,.018);
+  transform-style: preserve-3d;
+}
+.app > aside::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255,255,255,.035), transparent 26%, transparent 76%, color-mix(in srgb, var(--gr) 3%, transparent));
+}
+.app > aside::after {
+  position: absolute;
+  z-index: 0;
+  inset: 8px;
+  border: 1px solid rgba(255,255,255,.022);
+  border-radius: 11px;
+  content: '';
+  pointer-events: none;
+}
+.app > aside > * { position: relative; z-index: 1; }
+
+/* 03 — The S/A brand mark becomes a small, beveled 3D monogram. */
+.app > aside .logo i {
+  border-color: rgba(255,255,255,.24);
+  border-radius: 13px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.36), inset 0 -7px 12px rgba(0,0,0,.13), 0 6px 0 rgba(0,0,0,.27), 0 13px 20px -13px rgba(0,0,0,.9);
+  transform-style: preserve-3d;
+  transition: transform .32s cubic-bezier(.2,.8,.2,1), box-shadow .32s ease, filter .32s ease;
+}
+.app > aside .logo i > span {
+  display: block;
+  text-shadow: 0 1px 0 rgba(255,255,255,.34), 0 3px 5px rgba(0,0,0,.24);
+  transform-style: preserve-3d;
+  transition: transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.app > aside .logo i > span:first-child { transform: translateZ(5px) rotateY(-8deg) rotateZ(-3deg); }
+.app > aside .logo i > span:last-child { transform: translateZ(10px) rotateY(9deg) rotateZ(3deg); }
+
+/* 04 — Navigation controls get tactile depth and a calm role-colored active rail. */
+.app > aside button.nv {
+  border: 1px solid transparent;
+  transform-style: preserve-3d;
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), background .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease;
+}
+.app > aside button.nv .ic { text-shadow: 0 2px 7px color-mix(in srgb, var(--gr) 28%, transparent); transform: translateZ(5px); }
+.app > aside button.nv.on {
+  border-color: color-mix(in srgb, var(--gr) 25%, var(--bd));
+  background: linear-gradient(115deg, color-mix(in srgb, var(--gr) 14%, #11161b), color-mix(in srgb, var(--gr) 5%, #101419) 66%, #101419);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), inset 0 -1px 0 rgba(0,0,0,.35), 0 6px 13px -11px rgba(0,0,0,.9);
+}
+.app > aside button.nv.on::after {
+  display: block !important;
+  top: 21%;
+  right: 7px;
+  width: 3px;
+  height: 58%;
+  border-radius: 99px;
+  background: linear-gradient(180deg, transparent, var(--gr) 24%, var(--gr) 76%, transparent);
+  box-shadow: 0 0 11px color-mix(in srgb, var(--gr) 68%, transparent);
+  animation: none !important;
+}
+
+/* 05 — The top controls read like a compact glass command deck. */
+.app .top { transform-style: preserve-3d; }
+.app .top .chip {
+  border-color: color-mix(in srgb, var(--gr) 15%, var(--bd));
+  background: linear-gradient(145deg, #12181d, #0c1014 74%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 7px 16px -13px rgba(0,0,0,.95);
+  transform: perspective(900px) rotateX(1deg);
+}
+.app .top .fresh {
+  border-color: color-mix(in srgb, var(--gr) 18%, var(--bd));
+  background: linear-gradient(145deg, #151c21, #0d1216);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 3px 0 rgba(0,0,0,.24);
+}
+.app .top .bellb {
+  min-width: 42px;
+  min-height: 42px;
+  border-color: color-mix(in srgb, var(--gr) 18%, var(--bd));
+  background: linear-gradient(145deg, #151b21, #0b0f13);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.075), 0 5px 0 rgba(0,0,0,.24), 0 10px 18px -14px rgba(0,0,0,.9);
+  transform: perspective(500px) rotateY(-4deg) translateZ(2px);
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+/* 06 — The real-data goal card gets a fine glass edge and orbital depth. */
+.app .goal-snapshot {
+  border-color: color-mix(in srgb, var(--gr) 36%, var(--bd));
+  box-shadow: 0 26px 58px -42px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.055), inset 0 -1px 0 rgba(0,0,0,.3);
+  transform-style: preserve-3d;
+}
+.app .goal-snapshot::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block !important;
+  border-radius: inherit;
+  padding: 1px;
+  content: '';
+  pointer-events: none;
+  opacity: .62;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gr) 48%, transparent), transparent 25%, transparent 69%, color-mix(in srgb, var(--gr) 15%, transparent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.app .goal-snapshot.manager::before { background: linear-gradient(135deg, color-mix(in srgb, var(--am) 48%, transparent), transparent 27%, transparent 68%, color-mix(in srgb, var(--am) 15%, transparent)); }
+.app .goal-target-prism::before,
+.app .goal-target-prism::after {
+  position: absolute;
+  z-index: 0;
+  inset: 5px -4px;
+  border: 1px solid color-mix(in srgb, var(--gr) 24%, transparent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+  opacity: .56;
+  transform: rotateX(69deg) rotateZ(-12deg);
+  box-shadow: 0 0 17px color-mix(in srgb, var(--gr) 11%, transparent);
+}
+.app .goal-target-prism::after { inset: 13px -10px; opacity: .28; transform: rotateX(72deg) rotateZ(18deg); }
+.app .goal-snapshot.manager .goal-target-prism::before,
+.app .goal-snapshot.manager .goal-target-prism::after { border-color: color-mix(in srgb, var(--am) 32%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--am) 12%, transparent); }
+.app .goal-target-face { box-shadow: inset 0 1px 0 rgba(255,255,255,.75), inset 0 -15px 25px rgba(12,74,53,.14), 0 19px 32px rgba(0,0,0,.34); }
+.app .goal-snapshot.manager .goal-target-face { box-shadow: inset 0 1px 0 rgba(255,255,255,.76), inset 0 -15px 24px rgba(88,57,14,.13), 0 19px 32px rgba(0,0,0,.35); }
+
+/* 07 — KPI cards lift gently; their icon tiles sit on a beveled plane. */
+.app .g > .c,
+.app .mr > .c,
+.app .bento > .c {
+  transform-style: preserve-3d;
+  background: linear-gradient(145deg, rgba(255,255,255,.023), transparent 34%), #101419;
+  box-shadow: 0 16px 34px -29px rgba(0,0,0,.94), inset 0 1px 0 rgba(255,255,255,.035);
+  transition: transform .24s cubic-bezier(.2,.8,.2,1), border-color .22s ease, background .22s ease, box-shadow .24s ease;
+}
+.app .g > .c::after,
+.app .mr > .c::after,
+.app .bento > .c::after {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.11), color-mix(in srgb, var(--gr) 12%, transparent), transparent);
+  opacity: .72;
+}
+.app .g > .c .kpi-icon {
+  border: 1px solid color-mix(in srgb, var(--gr) 23%, var(--bd));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--gr) 17%, #1a2225), #11171b 72%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 5px 0 rgba(0,0,0,.23), 0 10px 16px -13px rgba(0,0,0,.9);
+  transform: perspective(500px) rotateX(7deg) rotateY(-9deg) translateZ(5px);
+  transition: transform .24s cubic-bezier(.2,.8,.2,1), filter .24s ease;
+}
+
+/* 08 — The daily progress ring floats above a subtle circular plinth. */
+.app .bento .hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  background:
+    radial-gradient(210px 180px at 18% 42%, color-mix(in srgb, var(--gr) 9%, transparent), transparent 72%),
+    radial-gradient(420px 240px at 103% -14%, color-mix(in srgb, var(--acc2) 8%, transparent), transparent 69%),
+    linear-gradient(145deg, #12181c, #0c1014 68%);
+  box-shadow: 0 23px 48px -38px rgba(0,0,0,.94), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.app .bento .hero::after {
+  position: absolute;
+  z-index: 0;
+  top: 12px;
+  right: 14px;
+  width: 120px;
+  height: 120px;
+  border: 1px solid color-mix(in srgb, var(--gr) 7%, transparent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+  box-shadow: 0 0 0 13px color-mix(in srgb, var(--gr) 2%, transparent), 0 0 0 26px color-mix(in srgb, var(--gr) 1.4%, transparent);
+}
+.app .bento .hero > * { position: relative; z-index: 1; }
+.app .bento .hero .ring {
+  filter: drop-shadow(0 16px 17px rgba(0,0,0,.3));
+  transform: perspective(900px) rotateY(-5deg) rotateX(3deg) translateZ(8px);
+  transform-style: preserve-3d;
+}
+.app .bento .hero .ring::before {
+  position: absolute;
+  z-index: -1;
+  inset: 9%;
+  border: 1px solid color-mix(in srgb, var(--gr) 16%, transparent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--gr) 10%, transparent), transparent 70%);
+  box-shadow: 0 15px 23px -18px color-mix(in srgb, var(--gr) 45%, transparent);
+}
+.app .bento .hero .ring svg { filter: drop-shadow(0 5px 9px color-mix(in srgb, var(--gr) 15%, transparent)); }
+
+/* 09 — The seven-day chart stands on a deeper glass-and-grid platform. */
+.app .b3 {
+  border-color: color-mix(in srgb, var(--gr) 26%, var(--bd));
+  background: linear-gradient(150deg, rgba(255,255,255,.025), transparent 36%), #0e1216;
+  box-shadow: 0 24px 46px -37px rgba(0,0,0,.96), inset 0 1px 0 rgba(255,255,255,.045);
+  transform-style: preserve-3d;
+}
+.app .b3-h { position: relative; z-index: 2; }
+.app .b3-stage { transform-style: preserve-3d; }
+.app .b3-scene { transform: rotateX(-15deg) rotateY(-19deg) translateZ(0); transform-style: preserve-3d; }
+.app .b3-floor {
+  border-color: color-mix(in srgb, var(--gr) 23%, var(--bd));
+  background:
+    radial-gradient(ellipse at 50% 16%, color-mix(in srgb, var(--gr) 10%, transparent), transparent 66%),
+    linear-gradient(color-mix(in srgb, var(--gr) 8%, transparent) 1px, transparent 1px) 0 0/38px 38px,
+    linear-gradient(90deg, color-mix(in srgb, var(--gr) 8%, transparent) 1px, transparent 1px) 0 0/38px 38px,
+    #0c1014;
+  box-shadow: inset 0 12px 24px -22px rgba(255,255,255,.22), 0 12px 30px -27px color-mix(in srgb, var(--gr) 45%, transparent);
+}
+.app .b3-bar .front { box-shadow: inset 0 1px 0 rgba(255,255,255,.36), inset 0 -9px 14px rgba(0,0,0,.11), 0 8px 12px -10px rgba(0,0,0,.75); }
+.app .b3-bar.today .front { box-shadow: inset 0 1px 0 rgba(255,255,255,.46), inset 0 -9px 14px rgba(0,0,0,.12), 0 0 16px color-mix(in srgb, var(--am) 20%, transparent); }
+
+/* 10 — Coach, manager report, focus quote and summary pills become layered surfaces. */
+.app .coach-panel {
+  border-color: color-mix(in srgb, var(--gr) 17%, var(--bd));
+  border-radius: 17px;
+  box-shadow: 0 21px 42px -35px rgba(0,0,0,.94), inset 0 1px 0 rgba(255,255,255,.045);
+  transform-style: preserve-3d;
+}
+.app .coach-panel.manager-coach { border-color: color-mix(in srgb, var(--acc2) 23%, var(--bd)); }
+.app .coach-panel > * { position: relative; z-index: 1; }
+.app .coach-panel::after {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  width: min(42%, 390px);
+  height: 100%;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent, color-mix(in srgb, var(--gr) 3.5%, transparent));
+}
+.app .coach-panel.manager-coach::after { background: linear-gradient(115deg, transparent, color-mix(in srgb, var(--acc2) 4%, transparent)); }
+.app .coach-metrics > div {
+  border-color: color-mix(in srgb, var(--gr) 11%, var(--bd));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 5px 11px -10px rgba(0,0,0,.9);
+  transform: perspective(600px) rotateX(1.5deg) translateZ(2px);
+}
+.app .manager-coach .coach-metrics > div { border-color: color-mix(in srgb, var(--acc2) 13%, var(--bd)); }
+.app .mr > .c { border-color: color-mix(in srgb, var(--gr) 12%, var(--bd)); }
+.app .mr > .mr-hero { border-color: color-mix(in srgb, var(--gr) 27%, var(--bd)); background: linear-gradient(145deg, color-mix(in srgb, var(--gr) 5%, #12171c), #0e1216 70%); }
+.app .motiv {
+  border-color: color-mix(in srgb, var(--gr) 16%, var(--bd));
+  background: radial-gradient(400px 170px at 2% 0%, color-mix(in srgb, var(--gr) 6%, transparent), transparent 72%), linear-gradient(145deg, #11171b, #0d1115);
+  box-shadow: 0 16px 35px -29px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.04);
+  transform-style: preserve-3d;
+}
+.app .motiv-next {
+  border-color: color-mix(in srgb, var(--gr) 20%, var(--bd));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 4px 0 rgba(0,0,0,.25);
+  transform: perspective(450px) rotateY(-8deg) translateZ(3px);
+  transition: transform .2s ease, border-color .2s ease, color .2s ease;
+}
+.app .ticker { border-color: color-mix(in srgb, var(--gr) 13%, var(--bd)); background: linear-gradient(145deg, #10161a, #0b0f13); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+.app .tk-i { padding: 5px 9px; border: 1px solid rgba(255,255,255,.045); border-radius: 999px; background: rgba(255,255,255,.018); }
+.app .tk-i::before { display: inline-block; width: 5px; height: 5px; margin: 0 7px 1px 0; border-radius: 50%; content: ''; background: var(--gr); box-shadow: 0 0 8px color-mix(in srgb, var(--gr) 38%, transparent); }
+
+/* Motion stays brief and only reveals real, already-loaded dashboard content. */
+@keyframes v21-rise { from { opacity: 0; translate: 0 9px; } to { opacity: 1; translate: 0 0; } }
+.app .tab-wrap > .goal-snapshot.c,
+.app .tab-wrap > .coach-panel.c,
+.app .tab-wrap > .motiv,
+.app .tab-wrap > .ticker,
+.app .tab-wrap > .b3,
+.app .tab-wrap .bento > .c,
+.app .tab-wrap .g > .c,
+.app .tab-wrap .mr > .c {
+  animation: v21-rise .48s cubic-bezier(.2,.8,.2,1) both !important;
+  animation-delay: var(--delay, 55ms);
+}
+
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .app > aside .logo:hover i {
+    filter: brightness(1.06);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 0 rgba(0,0,0,.26), 0 18px 25px -15px color-mix(in srgb, var(--gr) 34%, transparent);
+    transform: perspective(650px) rotateY(-8deg) rotateX(5deg) translateY(-2px) translateZ(4px);
+  }
+  .app > aside .logo:hover i > span:first-child { transform: translateZ(8px) rotateY(-4deg) rotateZ(-1deg); }
+  .app > aside .logo:hover i > span:last-child { transform: translateZ(15px) rotateY(5deg) rotateZ(1deg); }
+  .app > aside button.nv:hover {
+    border-color: color-mix(in srgb, var(--gr) 14%, var(--bd));
+    background: linear-gradient(100deg, rgba(255,255,255,.035), rgba(255,255,255,.008));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 7px 16px -13px rgba(0,0,0,.9);
+    transform: perspective(600px) translateX(2px) translateZ(5px) rotateY(-1deg);
+  }
+  .app > aside button.nv.on:hover { transform: perspective(600px) translateX(3px) translateZ(7px) rotateY(-1deg); }
+  .app .top .bellb:hover { border-color: color-mix(in srgb, var(--gr) 37%, var(--bd)); box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 7px 0 rgba(0,0,0,.21), 0 13px 20px -14px color-mix(in srgb, var(--gr) 25%, transparent); transform: perspective(500px) rotateY(0) rotateX(-4deg) translateY(-2px) translateZ(5px); }
+  .app .goal-snapshot:hover { border-color: color-mix(in srgb, var(--gr) 50%, var(--bd)); }
+  .app .goal-snapshot.manager:hover { border-color: color-mix(in srgb, var(--am) 52%, var(--bd)); }
+  .app .g > .c:hover,
+  .app .mr > .c:hover,
+  .app .bento > .c:hover {
+    border-color: color-mix(in srgb, var(--gr) 27%, var(--bd));
+    background-color: #13191e;
+    box-shadow: 0 25px 45px -32px rgba(0,0,0,.98), inset 0 1px 0 rgba(255,255,255,.075);
+    transform: perspective(1100px) rotateX(1.6deg) rotateY(-1.4deg) translateY(-4px) translateZ(5px) !important;
+  }
+  .app .g > .c:hover .kpi-icon { filter: brightness(1.08); transform: perspective(500px) rotateX(0) rotateY(0) translateZ(11px) translateY(-1px); }
+  .app .bento .hero:hover .ring { transform: perspective(900px) rotateY(-2deg) rotateX(1deg) translateY(-2px) translateZ(13px); }
+  .app .b3:hover .b3-scene { transform: rotateX(-12deg) rotateY(-16deg) translateY(-3px) translateZ(5px); }
+  .app .coach-panel:hover .coach-spark { transform: perspective(420px) rotateX(0) rotateY(8deg) translateZ(9px); }
+  .app .motiv-next:hover { border-color: var(--gr); color: var(--tx); transform: perspective(450px) rotateY(0) rotateX(-4deg) translateY(-2px) translateZ(7px); }
+}
+
+@media (max-width: 760px) {
+  .app::before { opacity: .46; background-size: auto, auto, auto, 58px 58px, 58px 58px; }
+  .app > aside { overflow-x: auto; overflow-y: hidden; box-shadow: 0 -8px 25px -20px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.045); }
+  .app .bento .hero::after { top: 8px; right: 8px; width: 84px; height: 84px; }
+  .app .bento .hero .ring { transform: perspective(800px) rotateY(-3deg) rotateX(2deg) translateZ(4px); }
+  .app .b3-scene { transform: rotateX(-13deg) rotateY(-17deg); }
+  .app .goal-target-prism::after { opacity: .16; }
+}
+@media (max-width: 560px) {
+  .app .top .chip { max-width: calc(100vw - 105px); }
+  .app .top .bellb { min-width: 38px; min-height: 38px; }
+  .app .bento .hero::after { width: 58px; height: 58px; }
+  .app .goal-target-prism::before { inset: 1px 6px; }
+  .app .goal-target-prism::after { display: none; }
+  .app .tk-track { gap: 5px; }
+  .app .tk-i { padding: 4px 7px; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app::before { animation: none !important; }
+  .app .tab-wrap > .goal-snapshot.c,
+  .app .tab-wrap > .coach-panel.c,
+  .app .tab-wrap > .motiv,
+  .app .tab-wrap > .ticker,
+  .app .tab-wrap > .b3,
+  .app .tab-wrap .bento > .c,
+  .app .tab-wrap .g > .c,
+  .app .tab-wrap .mr > .c { animation: none !important; }
+  .app .goal-target-prism { animation: none !important; }
+  .app .goal-progress i { animation: none !important; transform: none !important; }
+  .app .goal-snapshot::after { animation: none !important; }
+  .app > aside .logo i,
+  .app > aside .logo i > span,
+  .app > aside button.nv,
+  .app .top .bellb,
+  .app .g > .c,
+  .app .mr > .c,
+  .app .bento > .c,
+  .app .ring,
+  .app .goal-target-face,
+  .app .coach-spark,
+  .app .motiv-next { transition-duration: .01ms !important; }
+}

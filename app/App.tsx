@@ -38,7 +38,7 @@ function confetti(big=false){if(typeof document==='undefined')return;const w=doc
 function Sparkles(){const sparks=useMemo(()=>Array.from({length:20},(_,i)=>({i,l:3+((i*17)%31)/10,t:((i*13)%37)/10,d:`${(i*47+11)%100}%`,b:`${(i*29+7)%100}%`,s:1+(i%3)})),[]);return<div className="sparkles">{sparks.map(s=><i key={s.i}style={{left:s.d,top:s.b,width:s.s+'px',height:s.s+'px',animationDelay:s.t+'s',animationDuration:s.l+'s'}}/>)}</div>}
 function CountUp({n,dur=900,decimals=0}:{n:number;dur?:number;decimals?:number}){const[v,setV]=useState(0);useEffect(()=>{if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){setV(n);return}let raf=0;const t0=performance.now();const step=(t:number)=>{const p=Math.min((t-t0)/dur,1);const eased=1-Math.pow(1-p,3);setV(n*eased);if(p<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);return()=>cancelAnimationFrame(raf)},[n,dur]);return<>{decimals?Math.round(v*Math.pow(10,decimals))/Math.pow(10,decimals):Math.round(v)}</>}
 function Ring({p,sub,size=170,stroke=14,delay=0}:{p:number;sub?:string;size?:number;stroke?:number;delay?:number}){const r=(size-20)/2,C=2*Math.PI*r;const[lp,setLp]=useState(0);useEffect(()=>{const id=setTimeout(()=>setLp(Math.max(0,Math.min(100,p))),60+delay);return()=>clearTimeout(id)},[p,delay]);return<div className="ring"style={{width:size,height:size}}><svg viewBox={`0 0 ${size} ${size}`}><defs><linearGradient id={`rg${size}${delay}`}x1="0"x2="1"><stop offset="0"stopColor="var(--acc1)"/><stop offset="1"stopColor="var(--g2)"/></linearGradient></defs><circle cx={size/2}cy={size/2}r={r}fill="none"stroke="rgba(255,255,255,.08)"strokeWidth={stroke}/><circle cx={size/2}cy={size/2}r={r}fill="none"stroke={`url(#rg${size}${delay})`}strokeWidth={stroke}strokeLinecap="round"strokeDasharray={C}strokeDashoffset={C*(1-lp/100)}style={{transition:'stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)'}}/></svg><div className="t"style={{fontSize:size<140?'x-small':'medium'}}><b>{Math.round(lp)}%</b>{sub&&<span>{sub}</span>}</div></div>}
-function Stat({k,v,s,c,bar,icon,i,trend}:{k:string;v:any;s?:string;c?:string;bar?:number;icon?:string;i?:number;trend?:number}){return<div className="c"style={{'--i':i}as any}>{icon&&<div className="kpi-icon">{icon}</div>}<div className="k">{k}</div><div className={'v num '+(c||'')}>{v}{typeof trend==='number'&&trend!==0&&<span className={'trend-'+(trend>0?'up':'down')}title="Jämfört med motsvarande veckodagar föregående vecka">{trend>0?'▲':'▼'}{Math.abs(trend)}%</span>}</div><div className="s">{s}</div>{bar!=null&&<div className="bar"><i style={{width:Math.max(0,Math.min(100,bar))+'%'}}/></div>}</div>}
+function Stat({k,v,s,c,bar,icon,i,trend}:{k:string;v:any;s?:string;c?:string;bar?:number;icon?:string;i?:number;trend?:number}){return<div className="c"style={{'--i':i,'--delay':`${(i||0)*32}ms`}as any}>{icon&&<div className="kpi-icon">{icon}</div>}<div className="k">{k}</div><div className={'v num '+(c||'')}>{v}{typeof trend==='number'&&trend!==0&&<span className={'trend-'+(trend>0?'up':'down')}title="Jämfört med motsvarande veckodagar föregående vecka">{trend>0?'▲':'▼'}{Math.abs(trend)}%</span>}</div><div className="s">{s}</div>{bar!=null&&<div className="bar"><i style={{width:Math.max(0,Math.min(100,bar))+'%'}}/></div>}</div>}
 function Heat({rows,goal}:{rows:Row[];goal:number}){const n=new Date(),y=n.getFullYear(),m=n.getMonth(),last=new Date(y,m+1,0).getDate(),first=(new Date(y,m,1).getDay()+6)%7;const by=new Map(rows.map(r=>[r.entry_date,r.sales]));const cells:(number|null)[]=[...Array(first).fill(null),...Array.from({length:last},(_,i)=>i+1)];return<div className="heat">{['M','T','O','T','F','L','S'].map(d=><span key={d}className="hd">{d}</span>)}{cells.map((d,i)=>{if(!d)return<span key={i}/>;const k=iso(new Date(y,m,d));const v=by.get(k);const isToday=k===today();return<span key={i}className={'hc'+(isToday?' today':'')}title={v==null?k+' – ej registrerad':`${k}: ${v} sälj, ${fmtMoney(rows.find(r=>r.entry_date===k)!.tb_sek)}`}style={v!=null?{background:`rgba(52,224,138,${.2+Math.min(v/Math.max(goal,1),1.2)*.6})`,color:'#04170c',fontWeight:700}:undefined}>{d}</span>})}</div>}
 function Chart({a,goal,onHover}:{a:Row[];goal?:number;onHover?:(r:Row|null,x:number,y:number)=>void}){const ref=useRef<HTMLDivElement>(null);const[hv,setHv]=useState<{r:Row;x:number;y:number}|null>(null);if(!a.length)return<span className="s">Ingen data än</span>;const m=Math.max(...a.map(r=>r.sales),goal||1,1);return<div className="ch-wrap"ref={ref}onMouseLeave={()=>{setHv(null);onHover&&onHover(null,0,0)}}><div className="ch">{a.map(r=><div key={r.id}title={`${r.entry_date}: ${r.sales} sälj, ${fmtMoney(r.tb_sek)}${r.note?' – '+r.note:''}`}onMouseEnter={e=>{const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();const pr=ref.current?.getBoundingClientRect();setHv({r,x:rect.left+(rect.width/2)-(pr?.left||0),y:rect.top-(pr?.top||0)});onHover&&onHover(r,rect.left+rect.width/2-(pr?.left||0),rect.top-(pr?.top||0))}}><em>{r.sales}</em><b className={goal&&r.sales>=goal?'hit':''}style={{height:Math.max(3,(r.sales/m)*140)}}/>{r.mood&&<span className="day-emoji">{MOOD_EMOJI[r.mood]}</span>}<span className="s">{r.entry_date.slice(8)}/{r.entry_date.slice(5,7)}</span></div>)}</div>{hv&&<div className="ch-tip show"style={{left:hv.x,top:hv.y}}><b>{hv.r.sales} sälj</b> · {fmtMoney(hv.r.tb_sek)}<br/><span className="s">{hv.r.entry_date}{hv.r.note?' · '+hv.r.note:''}</span></div>}</div>}
 function YearHeat({rows,goal}:{rows:Row[];goal:number}){
@@ -105,6 +105,35 @@ function ManagerReport({rows,goal}:{rows:Row[];goal:Goals}){
     <div className="c"><div className="k">TB registrerat denna vecka</div><div className="mr-mid num">{cur.length?`${sv(T(cur))} kr`:'–'}</div><div className="s">Förra veckan: {prev.length?`${sv(T(prev))} kr`:'inga registreringar'}</div></div>
     <div className="c"><div className="k">Snitt / registrerad dag · 14 d</div><div className="mr-mid num">{days?avg.toFixed(1):'–'}{days?' sälj':''}</div><div className="s">{days} dagar med registrering</div></div>
     <div className="c"><div className="k">Starkaste dag i historiken</div><div className="mr-mid num">{best?Number(best.sales)+' sälj':'–'}</div><div className="s">{best?best.entry_date:'Inga registreringar än'}</div></div></div>
+}
+function GoalSnapshot({goal,todayRow,role,onEdit}:{goal:Goals;todayRow:Row|undefined;role:'seller'|'manager';onEdit?:()=>void}){
+  const manager=role==='manager',hasToday=!!todayRow,sales=Number(todayRow?.sales||0),progress=hasToday?pct(sales,goal.daily_sales):0;
+  const status=!hasToday?'Dagens resultat är inte registrerat. Målet kan inte bedömas utan dagens siffror.':sales>=goal.daily_sales?'Dagsmålet är nått.':`${fmt(Math.max(goal.daily_sales-sales,0))} sälj kvar till dagsmålet.`;
+  return <section className={`goal-snapshot c ${manager?'manager':'seller'}`} aria-label={manager?'Stilles dagsmål och målöversikt':'Din dagsmål och målöversikt'}>
+    <div className="goal-snapshot-head">
+      <div><div className="goal-eyebrow">{manager?'AFFES SNABBÖVERSIKT':'DIN MÅLPLAN'}</div><h3>{manager?'Stilles mål — tydligt från start':'Dina mål — tydligt från start'}</h3></div>
+      {manager?<span className="goal-readonly">◈ AFFE · SKRIVSKYDDAD</span>:<button type="button"className="b sm ghost goal-edit"onClick={onEdit}>Redigera mål <span aria-hidden="true">↗</span></button>}
+    </div>
+    <div className="goal-snapshot-layout">
+      <div className="goal-target-prism"aria-label={`${fmt(goal.daily_sales)} sälj i dagsmål`}>
+        <div className="goal-target-face"><span>{manager?'STILLES DAGSMÅL':'DAGSMÅL'}</span><strong>{fmt(goal.daily_sales)}<small>sälj</small></strong><em>per arbetsdag</em></div>
+        <div className="goal-target-side"aria-hidden="true"/><div className="goal-target-cap"aria-hidden="true"/>
+      </div>
+      <div className="goal-snapshot-detail">
+        <div className="goal-snapshot-today">
+          <div><span className="goal-eyebrow">{manager?'IDAG · STILLE':'DAGENS PROGRESS'}</span><strong>{hasToday?`${fmt(sales)} / ${fmt(goal.daily_sales)} sälj`:'Ej registrerat'}</strong></div>
+          <span className={hasToday?'goal-percent':'goal-missing'}>{hasToday?`${progress}%`:'—'}</span>
+        </div>
+        <p className="goal-snapshot-status"role="status">{status}</p>
+        <div className="goal-progress"aria-hidden="true"><i style={{width:hasToday?`${Math.min(progress,100)}%`:'0%'}}/></div>
+        <div className="goal-support-grid">
+          <div><span>TB / DAG</span><b>{fmtMoney(goal.daily_tb)}</b>{hasToday&&<small>Idag: {fmtMoney(Number(todayRow?.tb_sek||0))}</small>}</div>
+          <div><span>VECKOMÅL</span><b>{fmt(goal.weekly_sales)} <small>sälj</small></b><small>TB {fmtMoney(goal.weekly_tb)}</small></div>
+          <div><span>MÅNADSMÅL</span><b>{fmt(goal.monthly_sales)} <small>sälj</small></b><small>TB {fmtMoney(goal.monthly_tb)}</small></div>
+        </div>
+      </div>
+    </div>
+  </section>;
 }
 function CoachPanel({
   role, hasData, hasToday, hasMonthData, paceReliable, registeredWorkdays, elapsedWorkdays, needsStepUp, todaySales, dailyGoal, monthSales, monthGoal,
@@ -349,6 +378,23 @@ function Freshness({at,onRefresh}:{at:number;onRefresh:()=>Promise<void>}){
   const[busy,setBusy]=useState(false);const t=at?new Date(at).toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}):'–';
   return<button type="button"className="fresh"title={at?`Senast uppdaterad ${t}. Uppdatera nu.`:'Ingen uppdatering ännu. Försök igen.'}aria-label={busy?'Uppdaterar siffrorna':`Uppdatera siffrorna, senast ${t}`}aria-busy={busy}disabled={busy}onClick={async()=>{setBusy(true);try{await onRefresh()}finally{setBusy(false)}}}><span className={busy?'spin':''}aria-hidden="true">⟳</span> {busy?'…':t}</button>
 }
+function NotificationPanel({open,alerts,unread,onClose,onOpenComments,anchorRef}:{open:boolean;alerts:string[];unread:number;onClose:()=>void;onOpenComments:()=>void;anchorRef:{current:HTMLDivElement|null}}){
+  const[permission,setPermission]=useState<NotificationPermission|'checking'|'unsupported'>('checking');const[placed,setPlaced]=useState(false);const panelRef=useRef<HTMLElement>(null);
+  useEffect(()=>{setPermission(typeof Notification==='undefined'?'unsupported':Notification.permission)},[]);
+  useEffect(()=>{if(!open){setPlaced(false);return}const place=()=>{const anchor=anchorRef.current,panel=panelRef.current;if(!anchor||!panel)return;if(window.innerWidth>820){const r=anchor.getBoundingClientRect(),w=Math.min(365,window.innerWidth-24);panel.style.position='fixed';panel.style.left=`${Math.max(12,Math.min(r.right+13,window.innerWidth-w-12))}px`;panel.style.right='auto';panel.style.width=`${w}px`;panel.style.top='12px';panel.style.bottom='auto';const h=panel.offsetHeight;panel.style.top=`${Math.max(12,Math.min(r.bottom-h,window.innerHeight-h-12))}px`}else{panel.style.position='fixed';panel.style.left='';panel.style.right='';panel.style.top='';panel.style.bottom='';panel.style.width=''}setPlaced(true)};place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true)}},[open,anchorRef]);
+  const signals=alerts.filter(x=>!x.toLowerCase().includes('kommentar'));
+  const requestPermission=()=>{if(typeof Notification==='undefined')return;void Notification.requestPermission().then(setPermission).catch(()=>setPermission('denied'))};
+  return<section ref={panelRef}id="notification-center"className="notification-pop c"data-placed={placed?'true':'false'}role="region"aria-label="Notiscenter"hidden={!open}>
+    <div className="notification-head"><div className="notification-emblem"aria-hidden="true">⌁</div><div><div className="notification-eyebrow">STILLEAFFE · LIVE</div><h3>Notiscenter</h3></div><button type="button"className="notification-close"onClick={onClose}aria-label="Stäng notiscenter">×</button></div>
+    <div className="notification-summary">{signals.length?`${signals.length} lägesnotis${signals.length===1?'':'er'}`:unread?`${unread} oläst${unread===1?'':'a'} kommentar${unread===1?'':'er'}`:'Inga aktiva notiser just nu'}</div>
+    <div className="notification-list"aria-live="polite">
+      {signals.map((item,i)=><article className="notification-item"key={item}><span className="notification-item-glyph"aria-hidden="true">{i===0?'↗':'◈'}</span><p>{item}</p></article>)}
+      {unread>0&&<article className="notification-item notification-comments"><span className="notification-item-glyph"aria-hidden="true">✎</span><p><b>{unread} oläst{unread===1?'':'a'} kommentar{unread===1?'':'er'}</b><small>I Kommentarer · markeras som läst när du öppnar</small></p><button type="button"className="notification-open"onClick={onOpenComments}>Visa ↗</button></article>}
+      {!signals.length&&!unread&&<div className="notification-empty"><span aria-hidden="true">✓</span><b>Inget som väntar</b><p>Nya lägesnotiser visas här när det finns något att följa upp.</p></div>}
+    </div>
+    <div className="notification-footer"><span className={'permission-dot '+(permission==='granted'?'is-on':'')}/><span className="notification-permission-text">{permission==='granted'?'Skrivbordsnotiser aktiverade':permission==='denied'?'Notiser blockerade i webbläsaren':permission==='unsupported'?'Skrivbordsnotiser stöds inte här':permission==='checking'?'Kontrollerar notistillstånd':'Skrivbordsnotiser av'}</span>{permission==='default'&&<button type="button"className="notification-enable"onClick={requestPermission}>Aktivera</button>}</div>
+  </section>;
+}
 function NetStatus({onReconnect}:{onReconnect:()=>void}){
   const[off,setOff]=useState(false);
   useEffect(()=>{
@@ -454,7 +500,7 @@ function Bars3D({rows}:{rows:Row[]}){
   const recorded=days.filter(d=>d.sales!==null),mx=Math.max(1,...recorded.map(d=>d.sales||0));
   const total=recorded.reduce((n,d)=>n+(d.sales||0),0),best=recorded.reduce<(typeof recorded)[number]|null>((top,d)=>!top||(d.sales||0)>(top.sales||0)?d:top,null);
   const summary=best?`Bästa registrerade dag: ${best.k} (${best.sales} sälj)`:'Ingen registrering under de senaste sju dagarna.';
-  return<section className="c tilt b3"aria-labelledby="sales-3d-title">
+  return<section className="c tilt b3"aria-labelledby="sales-3d-title"onPointerMove={e=>{const scene=e.currentTarget.querySelector<HTMLElement>('.b3-scene');if(!scene)return;if(e.pointerType!=='mouse'||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||e.currentTarget.closest('.app')?.getAttribute('data-depth-mode')==='quiet'){scene.style.removeProperty('--rx');scene.style.removeProperty('--ry');return}const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;scene.style.setProperty('--rx',`${(-y*3).toFixed(2)}deg`);scene.style.setProperty('--ry',`${(x*3.5).toFixed(2)}deg`)}}onPointerLeave={e=>{const scene=e.currentTarget.querySelector<HTMLElement>('.b3-scene');scene?.style.removeProperty('--rx');scene?.style.removeProperty('--ry')}}>
     <div className="b3-h"><div><div id="sales-3d-title"className="k">Senaste 7 dagarna · 3D</div><div className="b3-tot num">{recorded.length?fmt(total):'–'} <small>{recorded.length?'sälj':'registreringar'}</small></div></div><div className="s">{summary}</div></div>
     <div className="b3-stage"aria-hidden="true"><div className="b3-scene">{days.map((d,i)=>{
       const height=d.sales===null?6:d.sales===0?8:Math.max(18,(d.sales/mx)*150);
@@ -483,7 +529,7 @@ export default function App(){
   const[cm,setCm]=useState<CItem[]>([]);const[unread,setUnread]=useState(0);
   const[cText,setCText]=useState('');const[cDate,setCDate]=useState('');
   const[bell,setBell]=useState(false);const[err,setErr]=useState('');
-  const[theme,setTheme]=useState<string>('default');const[themeInit,setThemeInit]=useState(false);
+  const[theme,setTheme]=useState<string>('default');const[themeInit,setThemeInit]=useState(false);const[depthMode,setDepthMode]=useState<'studio'|'quiet'>('studio');
   const[curPw,setCurPw]=useState('');const[newPw,setNewPw]=useState('');const[newPw2,setNewPw2]=useState('');const[pwMsg,setPwMsg]=useState<{t:string;ok?:boolean}|null>(null);
   const[activity,setActivity]=useState<Activity[]>([]);
   const[moodSel,setMoodSel]=useState<Mood>(null);
@@ -500,8 +546,9 @@ export default function App(){
   useEffect(()=>{const on=(e:MouseEvent)=>{const{x,y}=e;if(mouseRaf.current!==null)cancelAnimationFrame(mouseRaf.current);mouseRaf.current=requestAnimationFrame(()=>{if(spotRef.current){spotRef.current.style.left=x+'px';spotRef.current.style.top=y+'px';spotRef.current.classList.remove('hidden')}})};const off=()=>spotRef.current?.classList.add('hidden');window.addEventListener('mousemove',on,{passive:true});window.addEventListener('mouseleave',off);return()=>{window.removeEventListener('mousemove',on);window.removeEventListener('mouseleave',off);if(mouseRaf.current!==null)cancelAnimationFrame(mouseRaf.current)}},[]);
 
   // Theme + sound init
-  useEffect(()=>{try{const s=localStorage.getItem('sd_theme')||'default';setTheme(s);applyTheme(s);setSound(localStorage.getItem(SOUND_ENABLED_KEY)!=='0');setHaptics(localStorage.getItem(HAPTIC_ENABLED_KEY)!=='0');setAutoCoach(localStorage.getItem('sd_auto_coach')!=='0')}catch{}setThemeInit(true)},[]);
+  useEffect(()=>{try{const s=localStorage.getItem('sd_theme')||'default';setTheme(s);applyTheme(s);setSound(localStorage.getItem(SOUND_ENABLED_KEY)!=='0');setHaptics(localStorage.getItem(HAPTIC_ENABLED_KEY)!=='0');setAutoCoach(localStorage.getItem('sd_auto_coach')!=='0');setDepthMode(localStorage.getItem('sd_depth_mode')==='quiet'?'quiet':'studio')}catch{}setThemeInit(true)},[]);
   useEffect(()=>{if(!themeInit)return;applyTheme(theme);try{localStorage.setItem('sd_theme',theme)}catch{}},[theme,themeInit]);
+  useEffect(()=>{if(!themeInit)return;try{localStorage.setItem('sd_depth_mode',depthMode)}catch{}},[depthMode,themeInit]);
   useEffect(()=>{try{localStorage.setItem(SOUND_ENABLED_KEY,sound?'1':'0')}catch{}},[sound]);
   useEffect(()=>{try{localStorage.setItem(HAPTIC_ENABLED_KEY,haptics?'1':'0')}catch{}},[haptics]);
   useEffect(()=>{if(!themeInit)return;try{localStorage.setItem('sd_auto_coach',autoCoach?'1':'0')}catch{}},[autoCoach,themeInit]);
@@ -510,7 +557,7 @@ export default function App(){
   useEffect(()=>{if(loading)return;const ts=rows.find(r=>r.entry_date===today())?.sales||0;const p=pct(ts,g.daily_sales);const accent=getComputedStyle(document.documentElement).getPropertyValue('--gr').trim()||'#58d4ab';const warning=getComputedStyle(document.documentElement).getPropertyValue('--am').trim()||'#d8b05e';const title=`${ts}/${g.daily_sales} (${p}%) · Säljdashboard`;document.title=title;const f=document.querySelector('link[rel="icon"]')as HTMLLinkElement||document.createElement('link');if(!f.parentElement){f.rel='icon';document.head.appendChild(f)}const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#06080b';ctx.fillRect(0,0,64,64);ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,2*Math.PI-Math.PI/2);ctx.stroke();ctx.strokeStyle=ts>=g.daily_sales?accent:p>=70?warning:'#64707d';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,-Math.PI/2+2*Math.PI*(Math.min(p,100)/100));ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 22px Inter,system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(ts),32,32);f.href=canvas.toDataURL('image/png')},[rows,g,loading,role]);
 
   // Command palette (Ctrl/Cmd+K)
-  useEffect(()=>{const on=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCmd(v=>!v)}else if(e.key==='Escape'){setCmd(false)}};window.addEventListener('keydown',on);return()=>window.removeEventListener('keydown',on)},[]);
+  useEffect(()=>{const on=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCmd(v=>!v)}else if(e.key==='Escape'){setCmd(false);setBell(false)}};window.addEventListener('keydown',on);return()=>window.removeEventListener('keydown',on)},[]);
 
   const load=useCallback(async()=>{
     let j:any={};try{j=await(await fetch('/api/data',{credentials:'same-origin'})).json()}catch{j={error:'Kunde inte nå servern.'}}
@@ -653,21 +700,23 @@ export default function App(){
 
   if(loading)return<div className="skel"aria-busy="true"aria-label="Laddar"><div className="skel-h"/><div className="skel-g"><i/><i/><i/><i/></div><div className="skel-c"/><div className="skel-c short"/></div>;
 
-  return<div className="app"><Sparkles/>
+  return<div className="app"data-depth-mode={depthMode}><Sparkles/>
     <div ref={spotRef}className="spotlight hidden"aria-hidden="true"/>
     <aside aria-label="Navigation">
       <div className="logo"><i aria-hidden="true"><span>S</span><span>A</span></i><div className="t"><div>Säljdashboard</div><small>Stille &amp; Affe</small></div></div>
       {visibleTabs.map(t=><button key={t.id}className={'nv '+(tab===t.id?'on':'')}onClick={()=>{setTab(t.id);setEdit(null);setMoodSel(null);window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}data-tip={t.label}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
+      <div className="notification-dock"ref={bellRef}>
+        <button type="button"className={'notification-trigger'+(bell?' open':'')}onClick={()=>setBell(v=>!v)}aria-label={alerts.length?`Notiser, ${alerts.length} aktiva`:'Notiser'}aria-expanded={bell}aria-controls="notification-center"title="Öppna notiscenter">
+          <span className="notification-trigger-icon"aria-hidden="true"><svg viewBox="0 0 24 24"fill="none"focusable="false"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><span className="notification-trigger-label">Notiser</span>{alerts.length>0&&<span className="notification-count"aria-hidden="true">{alerts.length>9?'9+':alerts.length}</span>}
+        </button>
+        <NotificationPanel open={bell}alerts={alerts}unread={unread}anchorRef={bellRef}onClose={()=>setBell(false)}onOpenComments={()=>{setBell(false);setTab('comments');window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}/>
+      </div>
       <div className="who"><b>{can?'Stille':'Affe'}</b><span className="role">{can?'Säljare':'Chef'}</span><div className="row"style={{marginTop:8,gap:6}}><button className="b sm ghost"onClick={()=>setSound(s=>!s)}title="Ljud">{sound?'🔊':'🔇'}</button><button type="button"className="b sm ghost"onClick={doLogout}>Logga ut</button></div></div>
     </aside>
     <main ref={mainRef}key={tab}className="tab-wrap">
       <div className="top">
         <span className="chip">{visibleTabs.find(t=>t.id===tab)?.label||'Översikt'}{tab!=='overview'&&<span className="muted"> · {can?'Stille':'Affe'}</span>}<span className="muted"style={{marginLeft:10,opacity:.5}}>⌘K</span><Freshness at={fetchedAt}onRefresh={load}/></span>
 
-        <div style={{position:'relative'}}ref={bellRef}>
-          <button className="b bellb"onClick={()=>setBell(b=>!b)}aria-label="Notiser">🔔{alerts.length>0&&<i className="dot pulse-ring">{alerts.length}</i>}</button>
-          {bell&&<div className="c pop"><div className="k">Notiser</div>{alerts.length?alerts.map(x=><p key={x}className="al">{x}</p>):<p className="s">Allt lugnt 👌</p>}{typeof Notification!=='undefined'&&Notification.permission==='default'&&<button className="b"onClick={()=>{Notification.requestPermission().then(()=>setBell(false))}}>Aktivera notiser</button>}</div>}
-        </div>
       </div>
       {role==='manager'&&tab==='overview'&&showAffeTease&&<section className="affe-tease"role="status"aria-live="polite"><span className="affe-tease-icon"aria-hidden="true">😏</span><div><div className="affe-tease-k">En snabb pik till Affe</div><p>Du har så bra koll på Stilles siffror att man nästan tror att du säljer själv 😄 Men undrar — vem säljer bäst? 😉</p></div><button type="button"className="affe-tease-close"aria-label="Stäng meddelandet"onClick={()=>setShowAffeTease(false)}>×</button><div className="affe-tease-progress"aria-hidden="true"><i/></div></section>}
       {err&&<div className="c errb"role="alert"><div className="err-title">Databasen kunde inte laddas</div><p className="err-detail">{err}</p><p className="s">{/fetch failed|kunde inte nå servern/i.test(err)?'Vercel kunde inte nå Supabase. Kontrollera Project URL i NEXT_PUBLIC_SUPABASE_URL, att projektet är aktivt och att URL och servernyckel kommer från samma projekt.':'Kontrollera hälsokontrollen och att servern använder en Secret key eller service_role-nyckel — inte anon/publishable.'}</p><div className="row"style={{marginBottom:0}}><button className="b pri"onClick={()=>load()}>Försök igen</button><button className="b"onClick={()=>window.open('/api/health','_blank','noopener,noreferrer')}>Öppna hälsokontroll</button></div></div>}
@@ -675,6 +724,7 @@ export default function App(){
       {tab==='overview'&&<>
         <h2>{can?`${greet}, Stille`:'Affes ledningsvy'} <span className="ok">{can?'👋':'◈'}</span></h2>
         <p className="sub">{can?<>{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></>:`Stilles resultat · ${dayName} · Skrivskyddad översikt`}</p>
+        <GoalSnapshot role={can?'seller':'manager'}goal={g}todayRow={todayRow}onEdit={can?()=>setTab('goals'):undefined}/>
         <Motivation seller={can}/>
         <Checklist can={can}hasToday={!!todayRow}/>
         <Bars3D rows={rows}/>
@@ -842,22 +892,31 @@ export default function App(){
       </>}
 
       {tab==='goals'&&<>
-        <h2>Mål</h2>
-        <p className="sub">Spara för att tillämpa. Dagliga, veckovisa och månatliga mål.</p>
-        {can?<div className="c"style={{maxWidth:640,marginBottom:16}}><form key={JSON.stringify(g)}onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);saveGoals({daily_sales:Number(f.get('a')),daily_tb:Number(f.get('b')),weekly_sales:Number(f.get('e')),weekly_tb:Number(f.get('f')),monthly_sales:Number(f.get('c')),monthly_tb:Number(f.get('d'))})}}>
-          <div className="three">
-            <label>Dagsmål sälj<input name="a"type="number"min="0"defaultValue={g.daily_sales}/></label>
-            <label>Dagsmål TB (kr)<input name="b"type="number"min="0"defaultValue={g.daily_tb}/></label>
-            <label>Veckomål sälj<input name="e"type="number"min="0"defaultValue={g.weekly_sales}/></label>
-            <label>Veckomål TB<input name="f"type="number"min="0"defaultValue={g.weekly_tb}/></label>
-            <label>Månadsmål sälj<input name="c"type="number"min="0"defaultValue={g.monthly_sales}/></label>
-            <label>Månadsmål TB<input name="d"type="number"min="0"defaultValue={g.monthly_tb}/></label>
-          </div>
-          <button className="b pri">Spara mål</button>
-        </form></div>:<p className="s">Bara säljaren kan ändra mål.</p>}
+        <div className="goal-page-title"><div><div className="goal-eyebrow">PLAN · UPPFÖLJNING · RYTM</div><h2>Mål</h2><p className="sub">Dagsmål, veckomål och månadsmål samlade på ett ställe.</p></div><span className="goal-page-mark"aria-hidden="true">◎</span></div>
+        {!can&&<><GoalSnapshot role="manager"goal={g}todayRow={todayRow}/><div className="goal-readonly-note"role="note"><span>◈</span><div><strong>Affe har läsbehörighet</strong><small>Målen kan ses här men ändras endast av Stille.</small></div></div></>}
+        {can?<section className="goal-editor c"aria-labelledby="goal-editor-title">
+          <div className="goal-editor-intro"><span className="goal-editor-icon"aria-hidden="true">◎</span><div><div className="goal-eyebrow">STÄLL IN DIN PLAN</div><h3 id="goal-editor-title">Sätt ett tydligt riktmärke.</h3><p>Välj mål per period. De påverkar översikten och coachningen när du sparar.</p></div></div>
+          <form className="goal-form"key={JSON.stringify(g)}onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);saveGoals({daily_sales:Number(f.get('a')),daily_tb:Number(f.get('b')),weekly_sales:Number(f.get('e')),weekly_tb:Number(f.get('f')),monthly_sales:Number(f.get('c')),monthly_tb:Number(f.get('d'))})}}>
+            <div className="goal-editor-grid">
+              <section className="goal-period daily-period"><div className="goal-period-head"><span className="goal-index">01</span><div><h4>Dagsmål</h4><p>Fokus för en arbetsdag.</p></div><span className="goal-period-tag">VARJE DAG</span></div><div className="goal-field-grid">
+                <label className="goal-field"><span>Sälj <small>Antal avslut per dag</small></span><span className="goal-input-wrap"><input name="a"type="number"min="0"step="1"inputMode="numeric"defaultValue={g.daily_sales}aria-label="Dagsmål i sälj"/><em>sälj</em></span></label>
+                <label className="goal-field"><span>Täckningsbidrag <small>Ditt TB-riktmärke</small></span><span className="goal-input-wrap"><input name="b"type="number"min="0"step="any"inputMode="decimal"defaultValue={g.daily_tb}aria-label="Dagsmål i täckningsbidrag kronor"/><em>kr</em></span></label>
+              </div></section>
+              <section className="goal-period week-period"><div className="goal-period-head"><span className="goal-index">02</span><div><h4>Veckomål</h4><p>En jämn takt över veckan.</p></div><span className="goal-period-tag">VECKA</span></div><div className="goal-field-grid">
+                <label className="goal-field"><span>Sälj <small>Totalt för veckan</small></span><span className="goal-input-wrap"><input name="e"type="number"min="0"step="1"inputMode="numeric"defaultValue={g.weekly_sales}aria-label="Veckomål i sälj"/><em>sälj</em></span></label>
+                <label className="goal-field"><span>Täckningsbidrag <small>Totalt för veckan</small></span><span className="goal-input-wrap"><input name="f"type="number"min="0"step="any"inputMode="decimal"defaultValue={g.weekly_tb}aria-label="Veckomål i täckningsbidrag kronor"/><em>kr</em></span></label>
+              </div></section>
+              <section className="goal-period month-period"><div className="goal-period-head"><span className="goal-index">03</span><div><h4>Månadsmål</h4><p>Riktningen för hela månaden.</p></div><span className="goal-period-tag">MÅNAD</span></div><div className="goal-field-grid">
+                <label className="goal-field"><span>Sälj <small>Totalt för månaden</small></span><span className="goal-input-wrap"><input name="c"type="number"min="0"step="1"inputMode="numeric"defaultValue={g.monthly_sales}aria-label="Månadsmål i sälj"/><em>sälj</em></span></label>
+                <label className="goal-field"><span>Täckningsbidrag <small>Totalt för månaden</small></span><span className="goal-input-wrap"><input name="d"type="number"min="0"step="any"inputMode="decimal"defaultValue={g.monthly_tb}aria-label="Månadsmål i täckningsbidrag kronor"/><em>kr</em></span></label>
+              </div></section>
+            </div>
+            <div className="goal-save-row"><span>Ändringarna gäller först när du sparar.</span><button type="submit"className="b pri goal-save">Spara mål <span aria-hidden="true">↗</span></button></div>
+          </form>
+        </section>:null}
         <div className="g">
-          <Stat k="Veckans sälj"v={fmt(weekW?.sales||0)}s={`${fmt(g.weekly_sales)} mål · ${weekP}%`}bar={weekP}icon="📆"/>
-          <Stat k="Veckans TB"v={fmtMoney(weekW?.tb||0)}s={`${fmtMoney(g.weekly_tb)} mål · ${pct(weekW?.tb||0,g.weekly_tb)}%`}bar={pct(weekW?.tb||0,g.weekly_tb)}icon="💵"/>
+          <Stat k="Veckans sälj"v={currentWeekRows.length?fmt(weekW?.sales||0):'–'}s={currentWeekRows.length?`${fmt(g.weekly_sales)} mål · ${weekP}% · ${currentWeekRows.length} registrerade dagar`:'Ingen registrering hittills'}bar={currentWeekRows.length?weekP:undefined}icon="📆"/>
+          <Stat k="Veckans TB"v={currentWeekRows.length?fmtMoney(weekW?.tb||0):'–'}s={currentWeekRows.length?`${fmtMoney(g.weekly_tb)} mål · ${pct(weekW?.tb||0,g.weekly_tb)}% · ${currentWeekRows.length} registrerade dagar`:'Ingen registrering hittills'}bar={currentWeekRows.length?pct(weekW?.tb||0,g.weekly_tb):undefined}icon="💵"/>
           <Stat k="Sälj kvar (månad)"v={paceReliable?fmt(monthlySalesGap):'–'}s={!paceReliable?`Underlag ${registeredWorkdays}/${elapsedWorkdays} vardagar`:remainingWorkdays>0?`${f1(monthlySalesGap/remainingWorkdays)} per arbetsdag`:monthlySalesGap?'Arbetsdagarna slut':'Månadsmålet nått'}icon="⏳"/>
           <Stat k="TB kvar (månad)"v={paceReliable?fmtMoney(monthlyTbGap):'–'}s={!paceReliable?`Underlag ${registeredWorkdays}/${elapsedWorkdays} vardagar`:remainingWorkdays>0?fmtMoney(monthlyTbGap/remainingWorkdays)+'/arbetsdag':monthlyTbGap?'Arbetsdagarna slut':'Månadsmålet nått'}icon="⌛"/>
         </div>
@@ -888,6 +947,7 @@ export default function App(){
         <h2>Inställningar</h2><p className="sub">Anpassa utseende och säkerhet.</p>
         {can&&<div className="c coach-setting"><div><div className="k">Daglig AI-coach</div><p className="s">När din månadstakt ligger efter får du en kort, personlig nudge högst en gång per dag. Ingen AI-anropas när du ligger i fas.</p></div><button type="button"role="switch"aria-label="Daglig AI-coach"aria-checked={autoCoach}className={'switch '+(autoCoach?'on':'')}onClick={()=>setAutoCoach(v=>!v)}><span/></button></div>}
         <div className="c"style={{maxWidth:580,marginBottom:14}}><div className="k">Tema</div><div className="seg-theme"role="radiogroup"style={{marginTop:12}}>{THEMES.map(t=><button key={t.id}type="button"className={theme===t.id?'on':''}onClick={()=>setTheme(t.id)}aria-pressed={theme===t.id}title={t.label}><span style={{display:'block',width:'100%',height:'100%',borderRadius:10,background:t.grad}}>{t.emoji}</span></button>)}</div><p className="s">Valet sparas i din webbläsare.</p></div>
+        <section className="c depth-setting"aria-labelledby="depth-title"><div className="depth-setting-head"><span className="depth-setting-icon"aria-hidden="true">◇</span><div><div className="k"id="depth-title">3D &amp; rörelse</div><p className="s">Välj hur levande dashboarden ska kännas.</p></div></div><div className="depth-choice-list"role="group"aria-label="Visuellt dashboardläge"><button type="button"className={'depth-choice'+(depthMode==='studio'?' on':'')}aria-pressed={depthMode==='studio'}onClick={()=>setDepthMode('studio')}><span className="depth-choice-glyph"aria-hidden="true">✧</span><span><strong>Studio</strong><small>Mer 3D och subtil rörelse</small></span><span className="depth-choice-check"aria-hidden="true">✓</span></button><button type="button"className={'depth-choice'+(depthMode==='quiet'?' on':'')}aria-pressed={depthMode==='quiet'}onClick={()=>setDepthMode('quiet')}><span className="depth-choice-glyph"aria-hidden="true">◌</span><span><strong>Lugn</strong><small>Statiskt djup, färre övergångar</small></span><span className="depth-choice-check"aria-hidden="true">✓</span></button></div><p className="depth-setting-note">Sparas i den här webbläsaren. Operativsystemets inställning för reducerad rörelse gäller alltid först.</p></section>
         <div className="c"style={{maxWidth:580,marginBottom:14}}><div className="k">Ljud</div><div className="row"style={{margin:0}}><button className="b"onClick={()=>setSound(s=>!s)}>{sound?'🔊 Ljud på':'🔇 Ljud av'}</button><span className="s">Spelar ett litet chime vid mål och stora händelser.</span></div></div>
         <div className="c"style={{maxWidth:580,marginBottom:14}}><div className="k">Vibration</div><div className="row"style={{margin:0}}><button className="b"onClick={()=>setHaptics(v=>!v)}>{haptics?'📳 Vibration på':'📴 Vibration av'}</button><span className="s">Kräver en mobil eller enhet med vibrationsstöd.</span></div></div>
         <div className="c"style={{maxWidth:580,marginBottom:14}}><div className="k">Byt lösenord ({can?'Stille':'Affe'})</div><p className="s"style={{marginTop:6}}>Kräver nuvarande lösenord. Gäller för alla enheter.</p><form onSubmit={changePw}style={{marginTop:10}}><label>Nuvarande<input type="password"value={curPw}onChange={e=>setCurPw(e.target.value)}required/></label><div className="two"><label>Nytt<input type="password"value={newPw}onChange={e=>setNewPw(e.target.value)}required minLength={4}/></label><label>Bekräfta<input type="password"value={newPw2}onChange={e=>setNewPw2(e.target.value)}required minLength={4}/></label></div><div className="row"style={{margin:0}}><button className="b pri">Byt lösenord</button>{pwMsg&&<span className={'s '+(pwMsg.ok?'ok':'bad')}style={{alignSelf:'center'}}>{pwMsg.t}</span>}</div></form></div>

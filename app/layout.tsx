@@ -9,6 +9,9 @@ import './design-v17.css';
 import './design-v11.css';
 import './design-v18.css';
 import './design-v19.css';
+import './design-v20.css';
+import './design-v21.css';
+import './design-v22.css';
 import FocusMode from './FocusMode';
 import Fx from './Fx';
 

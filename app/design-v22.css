@@ -1,0 +1,302 @@
+/* StilleAffe v22 — immersive command center + practical notification center. */
+
+/* Login cards are in the same studio language: beveled roles, tactile avatar plates. */
+.auth-panel { perspective: 1450px; }
+.auth-card { transform-style: preserve-3d; }
+.auth-role {
+  transform-style: preserve-3d;
+  background: linear-gradient(145deg, rgba(255,255,255,.018), transparent 52%), #0c1014;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 6px 14px -12px rgba(0,0,0,.9);
+}
+.auth-role.is-active { transform: perspective(760px) rotateX(1deg) translateZ(3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 0 1px color-mix(in srgb, var(--auth-accent) 8%, transparent), 0 10px 22px -17px rgba(0,0,0,.85); }
+.auth-role-avatar { transform: perspective(480px) rotateY(-8deg) translateZ(5px); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 4px 0 rgba(0,0,0,.24); transition: transform .24s cubic-bezier(.2,.8,.2,1), box-shadow .24s ease; }
+.auth-submit { transform-style: preserve-3d; box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 5px 0 rgba(0,0,0,.2), 0 13px 26px -20px rgba(0,0,0,.85); }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .auth-shell .auth-role:hover { border-color: color-mix(in srgb, var(--auth-accent) 35%, #3a4550); background: linear-gradient(145deg, color-mix(in srgb, var(--auth-accent) 5%, #12171c), #101418); transform: perspective(760px) rotateY(-1.2deg) rotateX(1.2deg) translateX(2px) translateZ(5px); box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 12px 22px -18px rgba(0,0,0,.9); }
+  .auth-shell .auth-role:hover .auth-role-avatar { transform: perspective(480px) rotateY(0) translateZ(10px); }
+  .auth-shell .auth-submit:hover:not(:disabled) { transform: perspective(760px) rotateX(1.5deg) translateY(-2px) translateZ(4px); }
+}
+
+/* Cleaner header: keep the desktop exit action in the profile rail, not floating over the page. */
+@media (min-width: 821px) {
+  .app .logout-fix { display: none !important; }
+  .app .top { padding-right: 0 !important; }
+}
+.app .top { min-height: 42px; }
+.app .top .chip { display: flex; max-width: min(720px,100%); min-height: 38px; align-items: center; flex-wrap: wrap; padding: 5px 8px 5px 12px; gap: 5px 8px; }
+.app .tab-wrap > h2 { text-shadow: 0 8px 28px color-mix(in srgb, var(--gr) 9%, transparent); }
+.app .tab-wrap > .sub { color: color-mix(in srgb, var(--mu2) 82%, transparent); }
+
+/* Notification center dock — predictable place in the navigation, never floating in the page corner. */
+.app > aside { overflow-x: hidden; overflow-y: auto; }
+.app .notification-dock { position: relative; z-index: 130; margin: 5px 0 2px; }
+.app .notification-trigger {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #aab4bf;
+  cursor: pointer;
+  text-align: left;
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), border-color .2s ease, background .2s ease, box-shadow .2s ease, color .2s ease;
+}
+.app .notification-trigger-icon { display: grid; width: 22px; flex: 0 0 22px; place-items: center; color: var(--gr); }
+.app .notification-trigger-icon svg { width: 18px; height: 18px; overflow: visible; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.app .notification-trigger-label { font-size: 12px; font-weight: 620; }
+.app .notification-count {
+  display: grid;
+  min-width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  place-items: center;
+  margin-left: auto;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--am) 48%, transparent);
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--am) 16%, #11151a);
+  color: var(--am);
+  font-size: 9px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.app .notification-trigger:hover,
+.app .notification-trigger.open { border-color: color-mix(in srgb, var(--gr) 22%, var(--bd)); background: linear-gradient(105deg, color-mix(in srgb, var(--gr) 9%, #11161b), rgba(255,255,255,.015)); color: var(--tx); }
+.app .notification-trigger.open { box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 5px 15px -13px rgba(0,0,0,.9); }
+.app .notification-trigger:focus-visible,
+.app .notification-close:focus-visible,
+.app .notification-open:focus-visible,
+.app .notification-enable:focus-visible,
+.app .depth-choice:focus-visible { outline: 2px solid color-mix(in srgb, var(--gr) 76%, white); outline-offset: 2px; }
+.app .notification-pop[hidden] { display: none !important; }
+.app .notification-pop[data-placed="false"] { visibility: hidden; }
+.app .notification-pop {
+  position: fixed !important;
+  top: 12px;
+  right: auto;
+  bottom: auto;
+  left: 12px;
+  z-index: 200;
+  width: 365px;
+  max-height: min(72vh, 590px);
+  padding: 17px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-color: color-mix(in srgb, var(--gr) 19%, var(--bd2));
+  border-radius: 16px;
+  background: linear-gradient(145deg, #151b20, #0c1014 76%);
+  box-shadow: 0 30px 75px -35px rgba(0,0,0,.96), inset 0 1px 0 rgba(255,255,255,.075);
+  transform-origin: bottom left;
+}
+.app .notification-pop:not([hidden]) { animation: notification-arrive .22s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes notification-arrive { from { opacity: 0; translate: 0 8px; scale: .985; } to { opacity: 1; translate: 0 0; scale: 1; } }
+.app .notification-head { display: flex; align-items: center; gap: 10px; }
+.app .notification-emblem {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--gr) 29%, var(--bd));
+  border-radius: 11px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--gr) 16%, #18201e), #0e1416);
+  color: var(--gr);
+  font-size: 20px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 4px 0 rgba(0,0,0,.24);
+}
+.app .notification-eyebrow { margin-bottom: 2px; color: var(--gr); font-size: 8px; font-weight: 850; letter-spacing: .16em; }
+.app .notification-head h3 { margin: 0; color: var(--tx); font-size: 16px; font-weight: 760; letter-spacing: -.03em; }
+.app .notification-close {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  place-items: center;
+  margin-left: auto;
+  border: 1px solid var(--bd);
+  border-radius: 9px;
+  background: #11161b;
+  color: var(--mu2);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+.app .notification-summary { margin: 14px 0 8px; color: var(--mu); font-size: 10px; font-weight: 650; letter-spacing: .03em; }
+.app .notification-list { display: grid; gap: 7px; }
+.app .notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--bd);
+  border-radius: 11px;
+  background: linear-gradient(120deg, rgba(255,255,255,.026), rgba(255,255,255,.008));
+}
+.app .notification-item-glyph { display: grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; border: 1px solid color-mix(in srgb, var(--am) 22%, var(--bd)); border-radius: 8px; background: color-mix(in srgb, var(--am) 9%, #111418); color: var(--am); font-size: 12px; font-weight: 800; }
+.app .notification-item p { min-width: 0; margin: 1px 0 0; color: #d2d8de; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.app .notification-comments .notification-item-glyph { border-color: color-mix(in srgb, var(--acc2) 24%, var(--bd)); background: color-mix(in srgb, var(--acc2) 9%, #111418); color: var(--acc2); }
+.app .notification-comments p { display: grid; gap: 3px; }
+.app .notification-comments p b { color: var(--tx); font-size: 11px; }
+.app .notification-comments p small { color: var(--mu); font-size: 9px; }
+.app .notification-open { flex: 0 0 auto; align-self: center; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--acc2) 26%, var(--bd)); border-radius: 8px; background: #14161e; color: #c2b5f0; cursor: pointer; font-size: 9px; font-weight: 750; }
+.app .notification-empty { display: grid; justify-items: start; gap: 6px; padding: 17px 13px; border: 1px solid var(--bd); border-radius: 11px; background: rgba(255,255,255,.012); }
+.app .notification-empty > span { display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid color-mix(in srgb, var(--gr) 25%, var(--bd)); border-radius: 50%; background: color-mix(in srgb, var(--gr) 9%, #0d1214); color: var(--gr); font-size: 12px; }
+.app .notification-empty b { color: var(--tx); font-size: 11px; }
+.app .notification-empty p { margin: 0; color: var(--mu); font-size: 9px; line-height: 1.5; }
+.app .notification-footer { display: flex; align-items: center; gap: 7px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--bd); color: var(--mu); font-size: 9px; }
+.app .permission-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--mu); }
+.app .permission-dot.is-on { background: var(--gr); box-shadow: 0 0 8px color-mix(in srgb, var(--gr) 58%, transparent); }
+.app .notification-permission-text { min-width: 0; }
+.app .notification-enable { margin-left: auto; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--gr) 28%, var(--bd)); border-radius: 8px; background: color-mix(in srgb, var(--gr) 8%, #11161b); color: var(--gr); cursor: pointer; font-size: 9px; font-weight: 760; }
+
+/* User-controlled motion intensity, stored locally; system reduced-motion remains authoritative. */
+.app .depth-setting { max-width: 580px; margin: 0 0 14px; padding: 17px; }
+.app .depth-setting-head { display: flex; align-items: center; gap: 11px; margin-bottom: 13px; }
+.app .depth-setting-icon { display: grid; width: 37px; height: 37px; flex: 0 0 37px; place-items: center; border: 1px solid color-mix(in srgb, var(--gr) 25%, var(--bd)); border-radius: 11px; background: linear-gradient(145deg, color-mix(in srgb, var(--gr) 11%, #171e20), #101418); color: var(--gr); font-size: 19px; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 4px 0 rgba(0,0,0,.2); }
+.app .depth-setting-head .k { color: var(--tx); font-size: 11px; }
+.app .depth-setting-head p { margin: 3px 0 0; font-size: 10px; }
+.app .depth-choice-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.app .depth-choice {
+  display: grid;
+  grid-template-columns: 29px minmax(0,1fr) 17px;
+  align-items: center;
+  gap: 9px;
+  min-height: 60px;
+  padding: 9px 10px;
+  border: 1px solid var(--bd);
+  border-radius: 11px;
+  background: linear-gradient(145deg, #12171b, #0d1115);
+  color: var(--mu2);
+  cursor: pointer;
+  text-align: left;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.app .depth-choice.on { border-color: color-mix(in srgb, var(--gr) 42%, var(--bd)); background: linear-gradient(145deg, color-mix(in srgb, var(--gr) 9%, #141a1c), #0e1215); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 7px 14px -13px rgba(0,0,0,.95); color: var(--tx); }
+.app .depth-choice-glyph { display: grid; width: 27px; height: 27px; place-items: center; border: 1px solid var(--bd); border-radius: 8px; background: #101519; color: var(--mu); font-size: 15px; }
+.app .depth-choice.on .depth-choice-glyph { border-color: color-mix(in srgb, var(--gr) 34%, var(--bd)); color: var(--gr); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+.app .depth-choice > span:nth-child(2) { display: grid; gap: 3px; }
+.app .depth-choice strong { color: inherit; font-size: 10px; }
+.app .depth-choice small { color: var(--mu); font-size: 8px; line-height: 1.3; }
+.app .depth-choice-check { color: transparent; font-size: 11px; font-weight: 900; }
+.app .depth-choice.on .depth-choice-check { color: var(--gr); }
+.app .depth-setting-note { margin: 10px 0 0; color: var(--mu); font-size: 9px; line-height: 1.5; }
+
+/* Extra sculpted surfaces: bright specular edge, layered values and confident title hierarchy. */
+.app .g > .c,
+.app .mr > .c,
+.app .bento > .c { border-color: color-mix(in srgb, var(--bd) 80%, rgba(255,255,255,.08)); }
+.app .g > .c .v,
+.app .bento .hero .v,
+.app .mr-big { text-shadow: 0 7px 24px rgba(0,0,0,.28); }
+.app .coach-panel { background-image: radial-gradient(420px 220px at 100% -10%, color-mix(in srgb, var(--gr) 7%, transparent), transparent 72%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 35%); }
+.app .coach-panel.manager-coach { background-image: radial-gradient(420px 220px at 100% -10%, color-mix(in srgb, var(--acc2) 8%, transparent), transparent 72%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 35%); }
+.app .coach-panel.needs-push { background-image: radial-gradient(420px 220px at 100% -10%, color-mix(in srgb, var(--am) 8%, transparent), transparent 72%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 35%); }
+.app .coach-metrics > div { transition: border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease; }
+.app .notification-pop .notification-item { transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+
+/* Pointer-driven chart parallax updates only the small 3D chart scene, never React state. */
+.app .b3-scene { transform: rotateX(calc(-15deg + var(--rx,0deg))) rotateY(calc(-19deg + var(--ry,0deg))) translateZ(0); }
+.app .b3.tilt:hover .b3-scene { transform: rotateX(calc(-15deg + var(--rx,0deg))) rotateY(calc(-19deg + var(--ry,0deg))) translateZ(5px); }
+
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .app .notification-trigger:hover { transform: perspective(650px) translateX(2px) translateZ(5px); }
+  .app .notification-open:hover,
+  .app .notification-enable:hover { filter: brightness(1.13); transform: translateY(-1px); }
+  .app .notification-item:hover { border-color: color-mix(in srgb, var(--gr) 22%, var(--bd)); background: rgba(255,255,255,.035); transform: translateX(2px); }
+  .app .depth-choice:hover { border-color: color-mix(in srgb, var(--gr) 28%, var(--bd)); transform: translateY(-2px) perspective(600px) rotateX(1deg); }
+  .app .coach-metrics > div:hover { border-color: color-mix(in srgb, var(--gr) 28%, var(--bd)); background: #10171a; transform: perspective(600px) rotateX(0) translateZ(5px); }
+}
+
+/* Cinematic studio default vs. the quieter static-depth option. */
+.app[data-depth-mode="quiet"] .tab-wrap > .goal-snapshot.c,
+.app[data-depth-mode="quiet"] .tab-wrap > .coach-panel.c,
+.app[data-depth-mode="quiet"] .tab-wrap > .motiv,
+.app[data-depth-mode="quiet"] .tab-wrap > .ticker,
+.app[data-depth-mode="quiet"] .tab-wrap > .b3,
+.app[data-depth-mode="quiet"] .tab-wrap .bento > .c,
+.app[data-depth-mode="quiet"] .tab-wrap .g > .c,
+.app[data-depth-mode="quiet"] .tab-wrap .mr > .c { animation: none !important; }
+.app[data-depth-mode="quiet"] .goal-target-prism,
+.app[data-depth-mode="quiet"] .goal-snapshot::after,
+.app[data-depth-mode="quiet"] .b3-bar { animation: none !important; }
+.app[data-depth-mode="quiet"] .goal-progress i { animation: none !important; transform: none !important; }
+.app[data-depth-mode="quiet"] .b3-scene,
+.app[data-depth-mode="quiet"] .b3.tilt:hover .b3-scene { transform: rotateX(-17deg) rotateY(-21deg) !important; transition: none !important; }
+.app[data-depth-mode="quiet"] .notification-pop:not([hidden]) { animation: none !important; }
+.app[data-depth-mode="quiet"] .g > .c:hover,
+.app[data-depth-mode="quiet"] .mr > .c:hover,
+.app[data-depth-mode="quiet"] .bento > .c:hover { transform: none !important; }
+.app[data-depth-mode="quiet"] .goal-target-prism:hover .goal-target-face { transform: rotateY(-12deg) rotateX(3deg) translateZ(8px); filter: none; }
+.app[data-depth-mode="quiet"] .coach-panel:hover .coach-spark,
+.app[data-depth-mode="quiet"] .motiv-next:hover,
+.app[data-depth-mode="quiet"] .bento .hero:hover .ring,
+.app[data-depth-mode="quiet"] .g > .c:hover .kpi-icon,
+.app[data-depth-mode="quiet"] .notification-trigger:hover,
+.app[data-depth-mode="quiet"] .depth-choice:hover,
+.app[data-depth-mode="quiet"] .notification-item:hover { transform: none !important; }
+.app[data-depth-mode="quiet"] .notification-trigger,
+.app[data-depth-mode="quiet"] .depth-choice,
+.app[data-depth-mode="quiet"] .coach-metrics > div,
+.app[data-depth-mode="quiet"] .notification-item,
+.app[data-depth-mode="quiet"] .goal-target-face,
+.app[data-depth-mode="quiet"] .motiv-next { transition: none !important; }
+
+@media (max-width: 820px) {
+  .app > aside { overflow-x: auto; overflow-y: hidden; }
+  .app .notification-dock { order: -1; width: 40px; height: 48px; flex: 0 0 40px; margin: 0; }
+  .app .notification-trigger { width: 40px; min-width: 40px; height: 48px; min-height: 48px; justify-content: center; padding: 4px 1px; border-radius: 10px; }
+  .app .notification-trigger-label { display: none; }
+  .app .notification-trigger-icon { width: 100%; flex-basis: auto; }
+  .app .notification-count { position: absolute; top: -1px; right: -2px; min-width: 15px; height: 15px; padding: 0 3px; border-width: 1px; font-size: 8px; }
+  .app .notification-pop {
+    position: fixed !important;
+    top: auto !important;
+    right: 12px !important;
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+    z-index: 10000;
+    width: auto;
+    max-width: 420px;
+    max-height: min(67vh, 520px);
+    margin: 0 auto;
+    transform-origin: bottom center;
+  }
+  .app .depth-setting { max-width: 100%; }
+}
+@media (max-width: 560px) {
+  .app .depth-choice-list { grid-template-columns: 1fr; }
+  .app .notification-pop { right: 9px !important; left: 9px !important; bottom: calc(74px + env(safe-area-inset-bottom)) !important; padding: 14px; }
+  .app .notification-item { padding: 9px; }
+  .app .notification-footer { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app .notification-pop:not([hidden]) { animation: none !important; }
+  .app .tab-wrap > .goal-snapshot.c,
+  .app .tab-wrap > .coach-panel.c,
+  .app .tab-wrap > .motiv,
+  .app .tab-wrap > .ticker,
+  .app .tab-wrap > .b3,
+  .app .tab-wrap .bento > .c,
+  .app .tab-wrap .g > .c,
+  .app .tab-wrap .mr > .c { animation: none !important; }
+  .app .goal-target-prism,
+  .app .goal-snapshot::after,
+  .app .b3-bar,
+  .app .goal-progress i { animation: none !important; }
+  .app .goal-progress i { transform: none !important; }
+  .app .notification-trigger,
+  .app .notification-open,
+  .app .notification-enable,
+  .app .depth-choice,
+  .app .coach-metrics > div,
+  .app .notification-item,
+  .app .goal-target-face,
+  .app .motiv-next { transition: none !important; }
+}
