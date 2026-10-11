@@ -13,12 +13,12 @@ const TABS:{id:TabId;label:string;ic:string}[]=[
   {id:'history',label:'Historik',ic:'☰'},{id:'stats',label:'Statistik',ic:'▥'},
   {id:'year',label:'Årsvy',ic:'▤'},{id:'goals',label:'Mål',ic:'◎'},
   {id:'comments',label:'Kommentarer',ic:'✎'},{id:'ai',label:'AI-coach',ic:'✦'},
-  {id:'achievements',label:'Märken',ic:'🏅'},{id:'settings',label:'Inställningar',ic:'⚙'}];
+  {id:'settings',label:'Inställningar',ic:'⚙'}];
 
 type Prop={id:string;tool:string;input:any;done?:boolean};
 type Msg={r:'u'|'a';t:string;e?:boolean;props?:Prop[]};
 type CItem={id:number;author:string;body:string;entry_date:string|null;created_at:string;reaction?:string;pinned?:boolean};
-const THEMES=[{id:'default',label:'Sälj',emoji:'🟢',grad:'linear-gradient(135deg,#4ade80,#16a34a)'},{id:'midnight',label:'Midnatt',emoji:'🌌',grad:'linear-gradient(135deg,#60a5fa,#7c3aed)'},{id:'sunset',label:'Solnedgång',emoji:'🌅',grad:'linear-gradient(135deg,#fb923c,#f43f5e)'},{id:'forest',label:'Skog',emoji:'🌿',grad:'linear-gradient(135deg,#84cc16,#10b981)'},{id:'neon',label:'Neon',emoji:'💜',grad:'linear-gradient(135deg,#e879f9,#22d3ee)'}];
+const THEMES=[{id:'default',label:'Nattblå',emoji:'🔷',grad:'linear-gradient(135deg,#8b8cff,#5b5fe6)'},{id:'midnight',label:'Midnatt',emoji:'🌌',grad:'linear-gradient(135deg,#60a5fa,#7c3aed)'},{id:'sunset',label:'Solnedgång',emoji:'🌅',grad:'linear-gradient(135deg,#fb923c,#f43f5e)'},{id:'forest',label:'Skog',emoji:'🌿',grad:'linear-gradient(135deg,#84cc16,#10b981)'},{id:'neon',label:'Neon',emoji:'💜',grad:'linear-gradient(135deg,#e879f9,#22d3ee)'}];
 const SOUND_ENABLED_KEY='sd_sound';const HAPTIC_ENABLED_KEY='sd_haptics';
 function applyTheme(id:string){if(typeof document==='undefined')return;if(id==='default')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',id);}
 // Simple beep via WebAudio — no external assets
@@ -170,18 +170,148 @@ function MonthCal({rows}:{rows:Row[]}){
     <div className="cal-g">{['M','T','O','T','F','L','S'].map((w,i)=><div key={i}className="cal-w">{w}</div>)}{cells}</div></div>
 }
 
+const QUOTES:{t:string;s:string}[]=[
+ {t:'Discipline beats motivation.',s:'Motivation kommer och går. Rutinen stannar.'},
+ {t:'One call closer.',s:'Varje samtal flyttar dig närmare nästa ja.'},
+ {t:'Consistency creates results.',s:'Det är de tråkiga dagarna som bygger rekorden.'},
+ {t:'Beat yesterday.',s:'Inte alla andra. Bara gårdagens version av dig.'},
+ {t:'Your next level starts now.',s:'Inte på måndag. Inte efter lunch. Nu.'},
+ {t:'Small wins. Big results.',s:'Ett säljsamtal i taget blir en månad att vara stolt över.'},
+ {t:'Stay focused. Keep building.',s:'Fokus är en superkraft – skydda den.'},
+ {t:'Every call is an opportunity.',s:'Du vet aldrig vilket samtal som vänder dagen.'},
+ {t:'Nej är bara en omväg.',s:'Nästa samtal startar på noll igen – utnyttja det.'},
+ {t:'Calm voice. Sharp ears.',s:'Lyssna mer än du pratar, så säljer kunden åt dig.'},
+ {t:'Process över panik.',s:'Följ ditt upplägg även när siffrorna släpar.'},
+ {t:'Own the day.',s:'Du bestämmer tempot de första tio minuterna.'},
+ {t:'Det svåra samtalet först.',s:'Börja med det du helst skjuter upp.'},
+ {t:'Momentum is built, not found.',s:'Ett sälj till – så rullar det.'},
+ {t:'Build the streak.',s:'Varje arbetsdag du dyker upp räknas.'},
+ {t:'Tänk i veckor, inte i samtal.',s:'En seg timme bestämmer inte din vecka.'},
+ {t:'Earn it. Again.',s:'Förtroende säljer. Bygg det i varje samtal.'},
+ {t:'Pressure makes diamonds.',s:'Tuffa dagar är träning, inte bevis på något annat.'},
+ {t:'Be the reason they say yes.',s:'Tydlighet, lugn och ett enkelt nästa steg.'},
+ {t:'Progress, not perfection.',s:'Ett bättre samtal än det förra räcker långt.'},
+ {t:'Show up. Dial. Repeat.',s:'Enkelt att förstå. Svårt att göra. Därför lönar det sig.'},
+ {t:'Kvalitet i varje samtal.',s:'Ett bra samtal slår tre stressade.'},
+ {t:'Compound the effort.',s:'Små förbättringar varje dag blir stora över en månad.'},
+ {t:'Hunger with humility.',s:'Ambitiös men lyhörd – kombinationen vinner.'},
+ {t:'Energin smittar.',s:'Le innan du ringer. Rösten hör det.'},
+ {t:'Your only rival is your last record.',s:'Slå rekordet – eller förbered nästa.'},
+ {t:'Finish strong.',s:'De sista tjugo minuterna är ofta de mest lönsamma.'},
+ {t:'Trust the reps.',s:'Du blir bättre för varje samtal, även när det inte känns så.'},
+];
+function Motivation({seller}:{seller?:boolean}){
+  const[i,setI]=useState(()=>Math.floor(Math.random()*QUOTES.length));const[n,setN]=useState(0);
+  useEffect(()=>{const id=window.setInterval(()=>{setI(v=>(v+1+Math.floor(Math.random()*4))%QUOTES.length);setN(v=>v+1)},24000);return()=>window.clearInterval(id)},[]);
+  const q=QUOTES[i];
+  return<section className="motiv"aria-live="off"><div className="motiv-k">{seller?'DAGENS DRIV':'STILLES DRIV'}</div><p key={n}className="motiv-q">{q.t}</p><div key={'s'+n}className="motiv-s">{q.s}</div></section>
+}
+function ManagerOverview({rows,g,fetchedAt,dayName}:{rows:Row[];g:Goals;fetchedAt:number;dayName:string}){
+  const[span,setSpan]=useState(30);
+  const now=new Date(),td=isoD(now),today=rows.find(r=>r.entry_date===td);
+  const ts=Number(today?.sales||0),tt=Number(today?.tb_sek||0),dg=Number(g.daily_sales||0),mg=Number((g as any).monthly_sales||0);
+  const mo=rows.filter(r=>r.entry_date.startsWith(td.slice(0,7))),ms=mo.reduce((t,r)=>t+Number(r.sales||0),0),mt=mo.reduce((t,r)=>t+Number(r.tb_sek||0),0);
+  const yr=rows.find(r=>r.entry_date===isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-1)));
+  const dd=yr&&Number(yr.sales)>0?Math.round((ts-Number(yr.sales))/Number(yr.sales)*100):null;
+  const last30=rows.filter(r=>r.entry_date>=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-(span-1)))).sort((a,b)=>a.entry_date<b.entry_date?-1:1);
+  const psum=last30.reduce((t,r)=>t+Number(r.sales||0),0),pFrom=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-(span*2-1))),pTo=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-span+1)),pp=rows.filter(r=>r.entry_date>=pFrom&&r.entry_date<pTo).reduce((t,r)=>t+Number(r.sales||0),0);
+  const el=wdCount(now.getFullYear(),now.getMonth(),1,now.getDate()),tot=wdCount(now.getFullYear(),now.getMonth(),1,new Date(now.getFullYear(),now.getMonth()+1,0).getDate()),fc=el>0?Math.round(ms/el*tot):0;
+  const recent=[...rows].sort((a,b)=>a.entry_date<b.entry_date?1:-1).slice(0,7);
+  const upd=fetchedAt?new Date(fetchedAt).toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}):'–';
+  const head=<header className="mo-head"><div><h2>Stilles översikt</h2><p className="sub">{dayName} · Skrivskyddad vy</p></div><div className="mo-status"><i className={'live'+(today?'':' idle')}/>Uppdaterad {upd} · {today?'idag registrerad':'ingen registrering idag än'}</div></header>;
+  if(!rows.length)return<div className="mo">{head}<Motivation/><div className="c empty"><div className="empty-ic">◌</div><h3>Inga siffror ännu</h3><p>Så fort Stille registrerar sin första dag dyker allt upp här automatiskt.</p></div></div>;
+  const bar=(label:string,v:number,goal:number)=>{const p=Math.min(100,pct(v,goal));return<div className="mo-bar"><div className="mo-bar-t"><span>{label}</span><b className="num">{v} / {goal||'–'}</b></div><div className="bar"><i style={{width:(goal?p:0)+'%'}}/></div></div>};
+  return<div className="mo">{head}<Motivation/>
+    <section className="mo-hero">
+      <div className="c mo-today tilt"><div className="k">Idag</div><div className="mo-big num"><CountUp n={ts}/><small>sälj</small></div>
+        {dd!==null&&<span className={'chip-d '+(dd>=0?'pos':'neg')}>{dd>=0?'▲':'▼'} {Math.abs(dd)}% mot igår</span>}<div className="s">TB idag: {sv(tt)} kr</div></div>
+      <div className="c mo-ring tilt"><Ring p={pct(ts,dg)}sub={dg?`mål ${dg}`:'inget mål'}/><div className="k">Dagsmål</div></div>
+    </section>
+    <ManagerReport rows={rows}goal={g}/>
+    <div className="c mo-prog"><div className="k">Framsteg mot mål</div>{bar('Idag',ts,dg)}{bar('Månaden',ms,mg)}<div className="s">TB i månaden: {sv(mt)} kr</div><div className="mo-fc"><span>Prognos månaden (uppskattning)</span><b className="num">≈ {fc} sälj{mg>0&&<small className={fc>=mg?'pos':'neg'}> · {Math.round(fc/mg*100)}% av målet</small>}</b></div></div>
+    <div className="c sc mo-chart"><div className="mo-chart-h"><div className="k">Senaste {span} dagarna</div><div className="seg mo-seg">{[7,14,30].map(n=><button key={n}className={span===n?'on':''}onClick={()=>setSpan(n)}>{n} d</button>)}</div></div>{last30.length?<><Chart a={last30}goal={dg}/><div className="s">{psum} sälj under perioden{pp>0?<> · <b className={psum>=pp?'pos':'neg'}>{psum>=pp?'▲':'▼'} {Math.abs(Math.round((psum-pp)/pp*100))}%</b> mot föregående {span} dagar</>:null}</div></>:<p className="s">Inga registreringar under perioden.</p>}</div>
+    <div className="mo-two"><StreakDots rows={rows}/><WeekdayInsight rows={rows}/></div>
+    <div className="c mo-tl"><div className="k">Senaste aktivitet</div><ol className="tl">{recent.map(r=><li key={r.entry_date}><span className="tl-d">{new Date(r.entry_date+'T12:00:00').toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'short'})}</span><b className="num">{Number(r.sales)} sälj</b><span className="tl-t num">{sv(Number(r.tb_sek))} kr</span></li>)}</ol></div>
+  </div>
+}
+
+function wdCount(y:number,m:number,from:number,to:number){let n=0;for(let d=from;d<=to;d++){const w=new Date(y,m,d).getDay();if(w!==0&&w!==6)n++}return n}
+const WD=['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
+
+/* 1. Rutinrad – senaste 14 dagarna */
+function StreakDots({rows}:{rows:Row[]}){
+  const now=new Date(),has=new Set(rows.filter(r=>Number(r.sales)>0).map(r=>r.entry_date));
+  const days=Array.from({length:14},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-(13-i));return{k:isoD(d),w:d.getDay()}});
+  const n=days.filter(d=>has.has(d.k)).length;
+  return<div className="c dots"><div className="k">Rutinrad · 14 dagar</div><div className="dots-g">{days.map(d=><i key={d.k}title={d.k}className={(has.has(d.k)?'on':'')+(d.w===0||d.w===6?' we':'')}/>)}</div><div className="s">{n} av 14 dagar med sälj</div></div>
+}
+
+/* 2. Veckodagsanalys */
+function WeekdayInsight({rows}:{rows:Row[]}){
+  const sum=Array(7).fill(0),cnt=Array(7).fill(0);
+  rows.forEach(r=>{const w=(new Date(r.entry_date+'T12:00:00').getDay()+6)%7;sum[w]+=Number(r.sales||0);cnt[w]++});
+  const avg=sum.map((x,i)=>cnt[i]?x/cnt[i]:0),mx=Math.max(...avg),best=avg.indexOf(mx);
+  if(rows.length<5)return<div className="c wd"><div className="k">Veckodagsanalys</div><p className="s">Behöver minst 5 registrerade dagar för att visa mönster.</p></div>;
+  const show=avg.map((a,i)=>({a,i})).filter(x=>x.i<5||cnt[x.i]>0);
+  return<div className="c wd"><div className="k">Veckodagsanalys · snitt sälj</div><div className="wd-g">{show.map(({a,i})=><div key={i}className={'wd-c'+(i===best?' top':'')}><b className="num">{a.toFixed(1)}</b><i style={{height:Math.max(6,mx?a/mx*100:0)+'%'}}/><span>{WD[i].slice(0,3)}</span></div>)}</div><div className="s">Starkaste dag: <b>{WD[best]}</b> (snitt {mx.toFixed(1)}).</div></div>
+}
+
+/* 3. Fokus-timer (25/5) */
+function FocusTimer(){
+  const M={focus:25*60,break:5*60};
+  const[mode,setMode]=useState<'focus'|'break'>('focus');const[left,setLeft]=useState(M.focus);const[run,setRun]=useState(false);
+  const endRef=useRef(0);const key='sd_pomo_'+isoD(new Date());const[done,setDone]=useState(0);
+  useEffect(()=>{try{setDone(Number(localStorage.getItem(key)||0))}catch{}},[key]);
+  useEffect(()=>{if(!run)return;const id=window.setInterval(()=>{const l=Math.max(0,Math.round((endRef.current-Date.now())/1000));setLeft(l);
+    if(l<=0){window.clearInterval(id);setRun(false);try{beep(660,.15,'sine',.05);setTimeout(()=>beep(880,.2,'sine',.05),180)}catch{}
+      if(mode==='focus'){const n=done+1;setDone(n);try{localStorage.setItem(key,String(n))}catch{}setMode('break');setLeft(M.break)}else{setMode('focus');setLeft(M.focus)}}},500);return()=>window.clearInterval(id)},[run,mode,done,key]);
+  const total=M[mode],C=2*Math.PI*44,mm=String(Math.floor(left/60)).padStart(2,'0'),ss=String(left%60).padStart(2,'0');
+  const toggle=()=>{if(run){setRun(false)}else{endRef.current=Date.now()+left*1000;setRun(true)}};
+  const reset=()=>{setRun(false);setMode('focus');setLeft(M.focus)};
+  return<div className={'c pomo '+mode}><div className="k">Fokus-timer</div><div className="pomo-r"><svg viewBox="0 0 100 100"><circle cx="50"cy="50"r="44"className="pomo-bg"/><circle cx="50"cy="50"r="44"className="pomo-fg"strokeDasharray={C}strokeDashoffset={C*(1-left/total)}/></svg><div className="pomo-t num">{mm}:{ss}</div></div>
+    <div className="row"><button className="b pri"onClick={toggle}>{run?'Pausa':'Starta'}</button><button className="b ghost"onClick={reset}>Nollställ</button></div><div className="s">{mode==='focus'?'Fokusblock':'Paus'} · {done} block klara idag</div></div>
+}
+
+/* 4–8. Säljarens extra-paket: påminnelse, rekordjakt, plan, dagsrapport */
+function SellerExtras({rows,g,ts,tt,hasToday}:{rows:Row[];g:Goals;ts:number;tt:number;hasToday:boolean}){
+  const[copied,setCopied]=useState(false);
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth(),td=isoD(now);
+  const dg=Number(g.daily_sales||0),mg=Number((g as any).monthly_sales||0);
+  const best=[...rows].sort((a,b)=>Number(b.sales)-Number(a.sales))[0],bs=best?Number(best.sales):0;
+  const mo=rows.filter(r=>r.entry_date.startsWith(td.slice(0,7))),ms=mo.reduce((t,r)=>t+Number(r.sales||0),0);
+  const left=wdCount(y,m,now.getDate(),new Date(y,m+1,0).getDate()),needM=Math.max(0,mg-ms),perDay=left>0?needM/left:needM;
+  const chase=bs===0?null:ts>bs?'Nytt rekord idag! 🚀':ts===bs?'Du har jämnat ditt rekord – ett till slår det!':`${bs-ts} sälj kvar till ditt rekord (${bs})`;
+  const report=`Dagsrapport ${td}: ${ts} sälj${dg?` (${Math.round(ts/dg*100)}% av dagsmål ${dg})`:''}, TB ${sv(tt)} kr. Månaden hittills: ${ms} sälj.`;
+  const copy=async()=>{try{await navigator.clipboard.writeText(report)}catch{const t=document.createElement('textarea');t.value=report;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch{}t.remove()}setCopied(true);setTimeout(()=>setCopied(false),1800)};
+  const late=now.getHours()>=15&&!hasToday;
+  return<div className="sx">
+    {late&&<div className="c sx-late"><div><b>Du har inte registrerat idag än</b><div className="s">Lägg in dagens siffror så Affe ser dem direkt.</div></div><button className="b pri"onClick={()=>document.querySelector('.fix')?.scrollIntoView({behavior:'smooth',block:'center'})}>Registrera nu</button></div>}
+    <div className="sx-g">
+      <div className="c sx-rec"><div className="k">Rekordjakt</div><div className="sx-big num">{bs?`${Math.min(ts,bs)} / ${bs}`:'–'}</div><div className="bar"><i style={{width:(bs?Math.min(100,ts/bs*100):0)+'%'}}/></div><div className="s">{chase||'Registrera din första dag för att starta rekordjakten.'}</div></div>
+      <div className="c sx-plan"><div className="k">Så når du målen</div>
+        <div className="sx-row"><span>Dagsmål</span><b className="num">{dg?(ts>=dg?'Klart ✓':`${dg-ts} kvar`):'–'}</b></div>
+        <div className="sx-row"><span>Månadsmål</span><b className="num">{mg?(needM===0?'Klart ✓':`${needM} kvar`):'–'}</b></div>
+        <div className="sx-row"><span>Behövs per arbetsdag</span><b className="num">{mg&&needM>0?perDay.toFixed(1):'–'}</b></div>
+        <div className="s">{left} arbetsdagar kvar i månaden (inkl. idag).</div></div>
+      <FocusTimer/>
+      <div className="c sx-rep"><div className="k">Dagsrapport</div><p className="sx-txt">{report}</p><button className="b pri"onClick={copy}>{copied?'Kopierat ✓':'Kopiera rapport'}</button></div>
+    </div>
+    <div className="sx-g2"><StreakDots rows={rows}/><WeekdayInsight rows={rows}/></div>
+  </div>
+}
+
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
   const[tab,setTab]=useState<TabId>('overview');const[edit,setEdit]=useState<number|null>(null);
-  const[toast,setToast]=useState('');const[loading,setLoading]=useState(true);const[showAffeTease,setShowAffeTease]=useState(false);
+  const[toast,setToast]=useState('');const[loading,setLoading]=useState(true);const[fetchedAt,setFetchedAt]=useState(0);const[showAffeTease,setShowAffeTease]=useState(false);
   const[rg,setRg]=useState<'Idag'|'Denna vecka'|'Denna månad'|'Föregående månad'|'Detta år'|'Allt'>('Denna månad');
   const[msgs,setMsgs]=useState<Msg[]>([]);const[q,setQ]=useState('');const[busy,setBusy]=useState(false);
   const[ks,setKs]=useState<{configured:boolean;source:string|null}>({configured:false,source:null});const[keyIn,setKeyIn]=useState('');
   const[coachAi,setCoachAi]=useState('');const[coachBusy,setCoachBusy]=useState(false);const[autoCoach,setAutoCoach]=useState(true);
   const coachRequestKey=useRef('');
   const can=role==='seller';
-  const visibleTabs=can?TABS:TABS.filter(t=>t.id!=='register');
+  const visibleTabs=can?TABS:TABS.filter(t=>t.id==='overview');
   useEffect(()=>{document.documentElement.dataset.role=role},[role]);
   useEffect(()=>{if(role!=='manager'||loading)return;setShowAffeTease(true);const timer=window.setTimeout(()=>setShowAffeTease(false),10_000);return()=>window.clearTimeout(timer)},[role,loading]);
   const[cm,setCm]=useState<CItem[]>([]);const[unread,setUnread]=useState(0);
@@ -222,7 +352,7 @@ export default function App(){
     if(j.error){setErr(j.error);setLoading(false);return}
     setErr('');
     const mapped=(j.rows||[]).map((x:any)=>({...x,sales:Number(x.sales),tb_sek:Number(x.tb_sek),hours:x.hours==null?null:Number(x.hours),rating:x.rating==null?null:Number(x.rating),mood:x.mood||null,tags:Array.isArray(x.tags)?x.tags:[]}));
-    setRows(mapped);
+    setRows(mapped);setFetchedAt(Date.now());
     const gg:Goals=j.goals?{
       daily_sales:Number(j.goals.daily_sales)||DEF.daily_sales,daily_tb:Number(j.goals.daily_tb)||DEF.daily_tb,
       weekly_sales:Number(j.goals.weekly_sales)||DEF.weekly_sales,weekly_tb:Number(j.goals.weekly_tb)||DEF.weekly_tb,
@@ -231,7 +361,7 @@ export default function App(){
     setActivity(j.activity||[]);
     setLoading(false);loadC();
     fetch('/api/ai/key',{credentials:'same-origin'}).then(x=>x.json()).then(k=>{if(k.configured!==undefined)setKs(k)}).catch(()=>{});
-    fetch('/api/achievements',{credentials:'same-origin'}).then(x=>x.json()).then(a=>{if(Array.isArray(a.items))setUnlocked(new Set(a.items.map((x:any)=>x.key)))}).catch(()=>{}).finally(()=>setAchReady(true));
+    fetch('/api/achievements',{credentials:'same-origin'}).then(x=>x.json()).then(a=>{if(Array.isArray(a.items))setUnlocked(new Set(a.items.map((x:any)=>x.key)))}).catch(()=>{}).finally(()=>{});
   },[]);
   useEffect(()=>{load()},[load]);
   useEffect(()=>{if(!achReady||!rows.length||loading)return;
@@ -284,7 +414,6 @@ export default function App(){
     {label:'Visa mål',icon:'◎',fn:()=>setTab('goals')},
     {label:'Visa kommentarer',icon:'✎',fn:()=>setTab('comments')},
     {label:'Öppna AI-coach',icon:'✦',fn:()=>setTab('ai')},
-    {label:'Visa märken',icon:'🏅',fn:()=>setTab('achievements')},
     {label:'Öppna inställningar',icon:'⚙',fn:()=>setTab('settings')},
     {label:'+1 sälj (snabbregistrering)',icon:'🔥',fn:quick},
     {label:'Exportera CSV',icon:'⤓',fn:csv},
@@ -351,7 +480,8 @@ export default function App(){
       .catch(()=>{}).finally(()=>setCoachBusy(false));
   },[autoCoach,can,ks.configured,loading,coachNeedsStep,rows.length,remainingWorkdays,coachPrompt]);
 
-  if(loading)return<div className="center"><Sparkles/><div className="sk"><i/><i/><i/></div></div>;
+  useEffect(()=>{if(!can&&tab!=='overview')setTab('overview')},[can,tab]);
+  if(loading)return<div className="skel"aria-busy="true"aria-label="Laddar"><div className="skel-h"/><div className="skel-g"><i/><i/><i/><i/></div><div className="skel-c"/><div className="skel-c short"/></div>;
   return<div className="app"><Sparkles/>
     <div ref={spotRef}className="spotlight hidden"aria-hidden="true"/>
     <aside aria-label="Navigation">
@@ -370,9 +500,12 @@ export default function App(){
       {role==='manager'&&tab==='overview'&&showAffeTease&&<section className="affe-tease"role="status"aria-live="polite"><span className="affe-tease-icon"aria-hidden="true">😏</span><div><div className="affe-tease-k">En snabb pik till Affe</div><p>Du har så bra koll på Stilles siffror att man nästan tror att du säljer själv 😄 Men undrar — vem säljer bäst? 😉</p></div><button type="button"className="affe-tease-close"aria-label="Stäng meddelandet"onClick={()=>setShowAffeTease(false)}>×</button><div className="affe-tease-progress"aria-hidden="true"><i/></div></section>}
       {err&&<div className="c errb"role="alert"><div className="err-title">Databasen kunde inte laddas</div><p className="err-detail">{err}</p><p className="s">{/fetch failed|kunde inte nå servern/i.test(err)?'Vercel kunde inte nå Supabase. Kontrollera Project URL i NEXT_PUBLIC_SUPABASE_URL, att projektet är aktivt och att URL och servernyckel kommer från samma projekt.':'Kontrollera hälsokontrollen och att servern använder en Secret key eller service_role-nyckel — inte anon/publishable.'}</p><div className="row"style={{marginBottom:0}}><button className="b pri"onClick={()=>load()}>Försök igen</button><button className="b"onClick={()=>window.open('/api/health','_blank','noopener,noreferrer')}>Öppna hälsokontroll</button></div></div>}
 
-      {tab==='overview'&&<>
+      {tab==='overview'&&!can&&<ManagerOverview rows={rows}g={g}fetchedAt={fetchedAt}dayName={dayName}/>}
+      {tab==='overview'&&can&&<>
         <h2>{can?`${greet}, Stille`:'Affes ledningsvy'} <span className="ok">{can?'👋':'◈'}</span></h2>
         <p className="sub">{can?<>{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></>:`Stilles resultat · ${dayName} · Skrivskyddad översikt`}</p>
+        <Motivation seller/>
+        <SellerExtras rows={rows}g={g}ts={ts}tt={tt}hasToday={!!todayRow}/>
         {can&&<TodayFix sales={ts}tb={tt}has={!!todayRow}onSet={setToday}onClear={clearToday}/>}
         <Ticker items={[`Idag: ${todayRow?Number(todayRow.sales):0} sälj`,`Månaden: ${ms} sälj`,`TB månaden: ${sv(mt)} kr`,`${streak} dagar i rad 🔥`,can?'Fokus: dagens nästa steg':'Chefsvy · skrivskyddad uppföljning']}/>
         <CoachPanel role={can?'seller':'manager'} hasData={rows.length>0} needsStepUp={coachNeedsStep} todaySales={ts} dailyGoal={g.daily_sales} monthSales={ms} monthGoal={g.monthly_sales} ahead={ahead} remainingWorkdays={remainingWorkdays} requiredPerDay={requiredPerDay} recentAverage={recentCoachAverage} recentDays={recentCoachRows.length} aiText={can&&autoCoach?coachAi:''} aiBusy={can&&autoCoach&&coachBusy} aiConfigured={ks.configured} onAsk={()=>{setTab('ai');if(ks.configured)ask(can?coachPlanPrompt:`Jag är Affe, chef. Utifrån Stilles faktiska resultat hittills — ${ms} sälj den här månaden, ${ahead<0?`${f1(Math.abs(ahead))} efter`: `${f1(ahead)} före`} månadstakten och ${remainingWorkdays} arbetsdagar kvar — föreslå ett respektfullt sätt att stötta honom och en bra öppen fråga till vår nästa avstämning. Hitta inte på fakta.`)}}/>
@@ -573,11 +706,6 @@ export default function App(){
         </>}
       </>}
 
-      {tab==='achievements'&&<>
-        <h2>Märken & milstolpar <span className="streak-fire"style={{fontSize:24}}>🏅</span></h2>
-        <p className="sub">{unlockedArr.length} av {ACHIEVEMENTS.length} upplåsta. Fortsätt så här!</p>
-        <div className="g">{ACHIEVEMENTS.map(a=>{const on=unlocked.has(a.key);return<div key={a.key}className={'c '+(on?'':'ach-lock')}style={{textAlign:'center',padding:22,opacity:on?1:.55}}><div style={{fontSize:46,filter:on?'none':'grayscale(1)',transform:on?'none':'scale(.85)',transition:'.3s'}}>{a.emoji}</div><div style={{fontWeight:700,marginTop:6}}>{a.name}</div><div className="s"style={{fontSize:12,marginTop:4}}>{a.desc}</div>{on&&<span className="tag"style={{marginTop:8,display:'inline-block'}}>✓ Upplåst</span>}</div>})}</div>
-      </>}
 
       {tab==='settings'&&<>
         <h2>Inställningar</h2><p className="sub">Anpassa utseende och säkerhet.</p>
@@ -595,7 +723,6 @@ export default function App(){
         {!cmds.length&&<p className="s"style={{padding:16,textAlign:'center'}}>Inga träffar</p>}
         <div className="s"style={{padding:'8px 14px',borderTop:'1px solid var(--bd)',fontSize:11}}>⌘K för att öppna · ↑↓ navigera · ↵ kör · esc stäng</div>
       </div></div></div>}
-      {achPopup&&<div className="ach-modal"onClick={()=>setAchPopup(null)}><div className="ach-card"onClick={e=>e.stopPropagation()}><div className="ach-badge"><span>{achPopup.emoji}</span></div><div className="ach-title">Märke upplåst!</div><h3 style={{margin:0,fontSize:20}}>{achPopup.name}</h3><div className="ach-desc">{achPopup.desc}</div><button className="b pri"onClick={()=>setAchPopup(null)}>Fantastiskt!</button></div></div>}
     </main>
   </div>;
 }
