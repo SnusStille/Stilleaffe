@@ -14,8 +14,13 @@ import './design-v21.css';
 import './design-v22.css';
 import './design-v23.css';
 import './design-v24.css';
+import './design-v25.css';
+import './design-v26.css';
+import './design-v27.css';
 import FocusMode from './FocusMode';
 import Fx from './Fx';
+import FloorBg from './FloorBg';
+import Spotlight from './Spotlight';
 
 export const metadata = {
   title: 'Säljdashboard',
@@ -35,6 +40,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv" style={{ colorScheme: 'dark' }}>
       <body>
+        <FloorBg />
+        <Spotlight />
         <Fx />
         <FocusMode />
         {children}

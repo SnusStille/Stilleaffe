@@ -1,6 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
+import FloorBg from '../FloorBg';
 
 const MSG: Record<string, { text: string; kind?: 'warn' | 'ok' }> = {
   pw: { text: 'Fel lösenord. Kontrollera uppgifterna och försök igen.' },
@@ -31,6 +32,21 @@ export default function Login() {
   const [ok, setOk] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
   const pwRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !window.matchMedia('(hover: hover)').matches) return;
+    const el = document.querySelector('.auth-shell') as HTMLElement | null;
+    if (!el) return;
+    let raf = 0;
+    const mv = (e: PointerEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        el.style.setProperty('--tx', (e.clientX / window.innerWidth - 0.5).toFixed(3));
+        el.style.setProperty('--ty', (e.clientY / window.innerHeight - 0.5).toFixed(3));
+      });
+    };
+    window.addEventListener('pointermove', mv, { passive: true });
+    return () => { window.removeEventListener('pointermove', mv); cancelAnimationFrame(raf); };
+  }, []);
   const activeFocus = FOCUS_LINES[focusIndex];
 
   const bad = () => {
@@ -109,6 +125,7 @@ export default function Login() {
         />
         <div className="auth-art-shade" aria-hidden="true" />
         <div className="auth-art-grid" aria-hidden="true" />
+        <FloorBg variant="login" />
 
         <header className="auth-brand">
           <div className="auth-mark" role="img" aria-label="Stille och Affe">
@@ -123,6 +140,7 @@ export default function Login() {
 
         <div className="auth-story-copy">
           <div className="auth-eyebrow"><span>01</span><i aria-hidden="true" /> WALL STREET-ENERGI · EGEN DISCIPLIN</div>
+          <div className="auth-bell"><i aria-hidden="true" />MARKET OPEN · RING THE BELL</div>
           <h2>Gör jobbet.<br /><em>Äg resultatet.</em></h2>
           <p className="auth-story-lead">En tydlig blick på dagens resultat, nästa steg och vanorna som bygger något större.</p>
 
@@ -146,8 +164,8 @@ export default function Login() {
           <div className="auth-pair"><span>STILLE <small>SÄLJARE</small></span><b>×</b><span>AFFE <small>CHEF</small></span></div>
           <div className="auth-story-ticker" aria-hidden="true">
             <div className="auth-story-ticker-track">
-              <div className="auth-story-ticker-group"><span>STILLEAFFE</span><i>◇</i><span>FOKUS</span><i>◇</i><span>RYTM</span><i>◇</i><span>DISCIPLIN</span><i>◇</i></div>
-              <div className="auth-story-ticker-group"><span>STILLEAFFE</span><i>◇</i><span>FOKUS</span><i>◇</i><span>RYTM</span><i>◇</i><span>DISCIPLIN</span><i>◇</i></div>
+              <div className="auth-story-ticker-group"><span>RING THE BELL</span><i>▲</i><span>CLOSE THE DEAL</span><i>▲</i><span>NEXT CALL</span><i>▲</i><span>BEAT YESTERDAY</span><i>▲</i><span>STAY HUNGRY</span><i>▲</i><span>OWN THE DAY</span><i>▲</i></div>
+              <div className="auth-story-ticker-group"><span>RING THE BELL</span><i>▲</i><span>CLOSE THE DEAL</span><i>▲</i><span>NEXT CALL</span><i>▲</i><span>BEAT YESTERDAY</span><i>▲</i><span>STAY HUNGRY</span><i>▲</i><span>OWN THE DAY</span><i>▲</i></div>
             </div>
           </div>
         </footer>

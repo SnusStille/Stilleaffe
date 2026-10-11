@@ -80,7 +80,7 @@ function TodayFix({sales,tb,has,onSet,onClear}:{sales:number;tb:number;has:boole
     <p className="s">Står det fel? Ändra antalet och tryck Spara. Äldre dagar rättar eller tar du bort under Historik.</p></div>
 }
 
-function Ticker({items}:{items:string[]}){return<div className="ticker"role="group"aria-label="Snabbsammanfattning"><div className="tk-track">{items.map((t,i)=><span key={i}className="tk-i">{t}</span>)}</div></div>}
+function Ticker({items}:{items:string[]}){return<div className="ticker"role="group"aria-label="Snabbsammanfattning"><div className="tk-track">{[...items,...items].map((t,i)=><span key={i}className="tk-i">{t}</span>)}</div></div>}
 const pad2=(n:number)=>String(n).padStart(2,'0');
 const isoD=(d:Date)=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
 const isSalesWeekday=(date:string)=>{const day=new Date(date+'T12:00:00').getDay();return day>=1&&day<=5};
@@ -537,6 +537,34 @@ function LevelCard({rows}:{rows:Row[]}){
     <ol className="lvl-steps">{LEVELS.map((l,i)=><li key={l.n}className={i<=li?'on':''}><i/><span>{l.n}</span><small>{l.min}+</small></li>)}</ol></section>
 }
 
+/* v26: handelsgolvets klocka – verklig tid, verkligt tempo mot dagsmålet */
+function FloorClock({ts,dg,hasToday,rows}:{ts:number;dg:number;hasToday:boolean;rows:Row[]}){
+  const[now,setNow]=useState<Date|null>(null);
+  useEffect(()=>{setNow(new Date());const id=window.setInterval(()=>setNow(new Date()),1000);return()=>window.clearInterval(id)},[]);
+  if(!now)return<div className="c fclock"aria-hidden="true"/>;
+  const h=now.getHours()+now.getMinutes()/60,wd=now.getDay()!==0&&now.getDay()!==6,open=wd&&h>=8&&h<17,p=Math.max(0,Math.min(100,(h-8)/9*100));
+  const left=Math.max(0,17-h),lh=Math.floor(left),lm=Math.round((left-lh)*60),z=(n:number)=>String(n).padStart(2,'0');
+  const date=now.toLocaleDateString('sv-SE',{weekday:'long',day:'numeric',month:'long'});
+  const dayK=(n:number)=>isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-n)),sumS=(x:Row[])=>x.reduce((t,r)=>t+Number(r.sales||0),0);
+  const cur7=rows.filter(r=>r.entry_date>=dayK(6)&&r.entry_date<=dayK(0)),prev7=rows.filter(r=>r.entry_date>=dayK(13)&&r.entry_date<=dayK(7));
+  const mood=cur7.length>=3&&prev7.length>=3&&sumS(prev7)>0?Math.round((sumS(cur7)-sumS(prev7))/sumS(prev7)*100):null;
+  const prevMax=Math.max(0,...rows.filter(r=>r.entry_date<isoD(now)).map(r=>Number(r.sales||0))),ath=hasToday&&ts>0&&ts>prevMax;
+  let pace='';if(open&&hasToday&&dg>0&&p>=15){const r=(ts/dg)/(p/100);pace=r>=1.1?'Före schema':r>=.85?'I fas':'Efter schema'}
+  return<section className={'c fclock'+(open?' open':'')}aria-label="Handelsgolvets klocka">
+    <div className="fc-l"><span className="fc-dot"aria-hidden="true"/><b>{open?'MARKET OPEN':wd?(h<8?'FÖRE ÖPPNING':'MARKET CLOSED'):'HELG'}</b></div>
+    <div className="fc-t num"role="timer"aria-live="off">{z(now.getHours())}<i>:</i>{z(now.getMinutes())}<i>:</i><span>{z(now.getSeconds())}</span></div>
+    <div className="fc-r"><span className="fc-date">{date}</span>{open?<span>{lh} h {z(lm)} min kvar av dagsfönstret</span>:<span>Dagsfönster 08–17</span>}{mood!==null&&<span className={'fc-mood '+(mood>=5?'up':mood<=-5?'dn':'mid')}title="Senaste 7 dagar mot föregående 7 dagar">{mood>=5?'BULLISH ▲':mood<=-5?'BEARISH ▼':'NEUTRAL ▬'} · 7 d {mood>=0?'+':''}{mood}%</span>}{ath&&<em className="fc-ath">ALL-TIME HIGH ▲</em>}{pace&&<em className={'fc-pace '+(pace==='Före schema'?'up':pace==='I fas'?'mid':'dn')}>{pace}</em>}</div>
+    <div className="fc-bar"aria-hidden="true"><i style={{width:(open?p:h>=17&&wd?100:0)+'%'}}/>{[0,25,50,75,100].map(x=><u key={x}style={{left:x+'%'}}/>)}</div>
+  </section>
+}
+function Intro({name}:{name:string}){
+  const[show,setShow]=useState(false);
+  useEffect(()=>{try{if(sessionStorage.getItem('sd_intro')==='1'||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;sessionStorage.setItem('sd_intro','1')}catch{return}setShow(true);const id=window.setTimeout(()=>setShow(false),2100);return()=>window.clearTimeout(id)},[]);
+  if(!show)return null;
+  const hr=new Date().getHours(),open=hr>=8&&hr<17&&new Date().getDay()%6!==0;
+  return<div className="intro"role="presentation"onClick={()=>setShow(false)}><div className="intro-in"><div className="intro-mark"aria-hidden="true">SA</div><div className="intro-k">{open?'MARKET OPEN':'GOD KVÄLL'}</div><h1>Välkommen tillbaka, {name}.</h1><div className="intro-line"aria-hidden="true"/></div></div>
+}
+
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
@@ -733,11 +761,12 @@ export default function App(){
 
   if(loading)return<div className="skel"aria-busy="true"aria-label="Laddar"><div className="skel-h"/><div className="skel-g"><i/><i/><i/><i/></div><div className="skel-c"/><div className="skel-c short"/></div>;
 
-  return<div className="app"data-depth-mode={depthMode}><Sparkles/>
+  return<div className="app"data-depth-mode={depthMode}><Sparkles/><Intro name={can?'Stille':'Affe'}/>
     <div ref={spotRef}className="spotlight hidden"aria-hidden="true"/>
     <aside aria-label="Navigation">
       <div className="logo"><i aria-hidden="true"><span>S</span><span>A</span></i><div className="t"><div>Säljdashboard</div><small>Stille &amp; Affe</small></div></div>
       {visibleTabs.map(t=><button key={t.id}className={'nv '+(tab===t.id?'on':'')}onClick={()=>{setTab(t.id);setEdit(null);setMoodSel(null);window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}data-tip={t.label}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
+      <div className="ekg"aria-hidden="true"><span>LIVE</span><svg viewBox="0 0 120 28"preserveAspectRatio="none"><path pathLength={140}d="M0,14 L22,14 L28,14 L32,4 L38,24 L44,10 L50,14 L72,14 L78,14 L82,6 L88,22 L94,12 L100,14 L120,14"/></svg></div>
       <div className="who"><b>{can?'Stille':'Affe'}</b><span className="role">{can?'Säljare':'Chef'}</span><div className="row"style={{marginTop:8,gap:6}}><button className="b sm ghost"onClick={()=>setSound(s=>!s)}title="Ljud">{sound?'🔊':'🔇'}</button><button type="button"className="b sm ghost"onClick={doLogout}>Logga ut</button></div></div>
     </aside>
     <main ref={mainRef}key={tab}className="tab-wrap">
@@ -754,6 +783,7 @@ export default function App(){
         <h2>{can?`${greet}, Stille`:'Affes ledningsvy'} <span className="ok">{can?'👋':'◈'}</span></h2>
         <p className="sub">{can?<>{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></>:`Stilles resultat · ${dayName} · Skrivskyddad översikt`}</p>
         <GoalSnapshot role={can?'seller':'manager'}goal={g}todayRow={todayRow}onEdit={can?()=>setTab('goals'):undefined}/>
+        <FloorClock ts={Number(ts)}dg={Number(g.daily_sales||0)}hasToday={!!todayRow}rows={rows}/>
         <Motivation seller={can}live={liveMsg}/>
         <Checklist can={can}hasToday={!!todayRow}/>
         <Bars3D rows={rows}/>

@@ -1,0 +1,56 @@
+/* ===========================================================
+   v26 — handelsgolvets klocka, intro, parallax, finish
+   =========================================================== */
+/* Klockan */
+.fclock{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px 22px;margin-bottom:14px;padding:16px 20px;overflow:hidden;
+  border-color:color-mix(in srgb,var(--gold) 26%,var(--bd))!important}
+.fc-l{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--mu2)}
+.fclock.open .fc-l{color:var(--gold)}
+.fc-dot{width:9px;height:9px;border-radius:50%;background:#64707d}
+.fclock.open .fc-dot{background:var(--gold);animation:bellPulse 1.8s ease-out infinite}
+.fc-t{font-size:clamp(30px,5vw,50px);font-weight:800;letter-spacing:.02em;text-align:center;font-variant-numeric:tabular-nums;
+  background:linear-gradient(100deg,#fff,#ffe9a3 60%,var(--gold));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.fc-t i{font-style:normal;margin:0 2px;animation:fcBlink 1s steps(2,start) infinite}
+@keyframes fcBlink{to{opacity:.25}}
+.fc-r{display:grid;gap:3px;justify-items:end;text-align:right;font-size:12px;color:var(--mu2)}
+.fc-date{text-transform:capitalize;color:var(--tx);font-weight:700}
+.fc-pace{font-style:normal;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:99px;border:1px solid var(--bd2)}
+.fc-pace.up{color:#34d399;border-color:color-mix(in srgb,#34d399 50%,transparent)}
+.fc-pace.mid{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 50%,transparent)}
+.fc-pace.dn{color:#fb7185;border-color:color-mix(in srgb,#fb7185 50%,transparent)}
+.fc-bar{grid-column:1/-1;position:relative;height:6px;border-radius:99px;background:rgba(255,255,255,.07);margin-top:4px}
+.fc-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,var(--gold2),var(--gold),#ffe9a3);transition:width 1s linear;box-shadow:0 0 14px -2px var(--gold)}
+.fc-bar u{position:absolute;top:-3px;width:1px;height:12px;background:rgba(255,255,255,.18)}
+@media(max-width:700px){.fclock{grid-template-columns:1fr;text-align:center}.fc-l{justify-content:center}.fc-r{justify-items:center;text-align:center}}
+
+/* Intro vid inloggning */
+.intro{position:fixed;inset:0;z-index:600;display:grid;place-items:center;cursor:pointer;
+  background:radial-gradient(circle at 50% 38%,#17202a,#05070a 70%);animation:introOut .5s ease 1.6s both}
+.intro-in{display:grid;justify-items:center;gap:12px;text-align:center;padding:24px}
+.intro-mark{width:68px;height:68px;border-radius:18px;display:grid;place-items:center;font-weight:900;font-size:24px;letter-spacing:.04em;color:#0b0b0b;
+  background:linear-gradient(135deg,#ffe9a3,var(--gold));box-shadow:0 0 50px -6px var(--gold);animation:introPop .7s cubic-bezier(.3,1.5,.5,1) both}
+.intro-k{font-size:12px;font-weight:800;letter-spacing:.3em;color:var(--gold);animation:introUp .6s ease .2s both}
+.intro h1{margin:0;font-size:clamp(26px,5vw,44px);letter-spacing:-.03em;animation:introUp .6s ease .35s both}
+.intro-line{width:min(320px,70vw);height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);animation:introLine .9s ease .5s forwards}
+@keyframes introPop{from{transform:scale(.4) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes introUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes introLine{to{transform:scaleX(1)}}
+@keyframes introOut{to{opacity:0;visibility:hidden}}
+
+/* Klockan i toppen lyser när något nytt väntar */
+.app .notif-top .notification-trigger:has(.notification-count){animation:bellGlow 2.4s ease-in-out infinite}
+@keyframes bellGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--gold) 0%,transparent)}50%{box-shadow:0 0 22px -2px color-mix(in srgb,var(--gold) 60%,transparent)}}
+
+/* Parallax i inloggningen (separata 'translate'-egenskaper stör inte befintliga animationer) */
+.auth-art{translate:calc(var(--tx,0)*-16px) calc(var(--ty,0)*-10px)}
+.auth-card{translate:calc(var(--tx,0)*7px) calc(var(--ty,0)*5px);transition:translate .4s cubic-bezier(.2,.8,.2,1)}
+.auth-story-copy{translate:calc(var(--tx,0)*-6px) calc(var(--ty,0)*-4px);transition:translate .5s cubic-bezier(.2,.8,.2,1)}
+
+/* Små finish-detaljer */
+.app .c{transition:border-color .3s,box-shadow .35s,transform .25s}
+.app .c:hover{border-color:color-mix(in srgb,var(--gold) 30%,var(--bd))!important}
+.app .stat-change.up{animation:floatY 2.6s ease-in-out infinite!important}
+
+@media(prefers-reduced-motion:reduce){.fc-t i,.fc-dot,.intro,.intro *,.app .notif-top .notification-trigger,.app .stat-change.up{animation:none!important}.intro{display:none}.auth-art,.auth-card,.auth-story-copy{translate:none}}
+html[data-focus="1"] .fclock{display:none}
+@media print{.fclock,.intro{display:none!important}}
