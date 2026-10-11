@@ -24,7 +24,7 @@ Använd Node.js 22.x.
 
 ## Senaste förbättringar
 
-- V20–V22: animerad login-hero, fördjupad 3D i båda rollernas vyer, valbart Studio/Lugn-läge och ett nytt notiscenter i navigeringen (inte längre uppe i sidans högra hörn). Se `LOGIN-REDESIGN.md`, `DESIGN-v21.md` och `DESIGN-v22.md`.
+- V20–V23: login-hero med tydligare Wall Street-inspirerad bildrörelse, fördjupad 3D i båda rollernas vyer, valbart Studio/Lugn-läge och ett nytt notiscenter i navigeringen (inte längre uppe i sidans högra hörn). Inloggningsanimationerna följer `prefers-reduced-motion`. Se `LOGIN-REDESIGN.md` och `DESIGN-v21.md`–`DESIGN-v23.md`.
 - Tydlig, rollanpassad översikt: Stille får dagens mål och nästa steg; Affe får en skrivskyddad chefsbild med veckomål och trend endast på jämförbara registrerade vardagar.
 - Saknade registreringar visas separat från faktiska nollor. Månadssammanfattningen jämför samma hittillsvarande kalenderperiod och visar registrerade dagar.
 - Säljaren kan få högst en automatiserad, datagrundad AI-nudge per lokal dag när månadstakten eller dagens resultat halkar efter. Den kan stängas av i Inställningar; saknade rader behandlas inte som noll, och verktyg skickar bara förslag som användaren själv godkänner.

@@ -11,6 +11,7 @@ function isOpen(p: string): boolean {
     p.startsWith('/_next/') ||
     p.startsWith('/icon') ||
     p === '/wallstreet-inspiration.webp' ||
+    p === '/wallstreet-floor-original.jpg' ||
     p.startsWith('/manifest')
   );
 }

@@ -101,8 +101,8 @@ export default function Login() {
       <section className="auth-story" aria-label="StilleAffe — fokus och ambition">
         <Image
           className="auth-art"
-          src="/wallstreet-inspiration.webp"
-          alt="En anonym affärsperson ser ut över Manhattans finansdistrikt i skymningen."
+          src="/wallstreet-floor-original.jpg"
+          alt="Ett livligt, anonymt handelsgolv med Manhattan genom stora fönster."
           fill
           priority
           sizes="(max-width: 860px) 100vw, 58vw"
@@ -144,7 +144,12 @@ export default function Login() {
 
         <footer className="auth-story-footer">
           <div className="auth-pair"><span>STILLE <small>SÄLJARE</small></span><b>×</b><span>AFFE <small>CHEF</small></span></div>
-          <span className="auth-story-footnote">FOKUS · RYTM · UPPFÖLJNING</span>
+          <div className="auth-story-ticker" aria-hidden="true">
+            <div className="auth-story-ticker-track">
+              <div className="auth-story-ticker-group"><span>STILLEAFFE</span><i>◇</i><span>FOKUS</span><i>◇</i><span>RYTM</span><i>◇</i><span>DISCIPLIN</span><i>◇</i></div>
+              <div className="auth-story-ticker-group"><span>STILLEAFFE</span><i>◇</i><span>FOKUS</span><i>◇</i><span>RYTM</span><i>◇</i><span>DISCIPLIN</span><i>◇</i></div>
+            </div>
+          </div>
         </footer>
       </section>
 
