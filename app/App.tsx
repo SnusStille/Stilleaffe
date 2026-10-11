@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Activity, ACHIEVEMENTS, DEF, Goals, greeting, groupByMonth, iso, MOOD_EMOJI, MOOD_LABEL,
   Mood, mon, pbDay, pbTB, pct, prevRange, range, Row, streakAt, bestStreak,
@@ -34,6 +35,7 @@ function eventText(a:Activity):string{
     default:return a.event;
   }
 }
+function ringBell(){beep(880,1.3,'sine',.05);setTimeout(()=>beep(1320,1,'sine',.035),30);setTimeout(()=>beep(1760,.7,'triangle',.02),60);setTimeout(()=>beep(880,1.1,'sine',.04),520)}
 function confetti(big=false){if(typeof document==='undefined')return;const w=document.createElement('div');w.className='confetti';if(big)w.classList.add('mega');const n=big?180:110;for(let i=0;i<n;i++){const e=document.createElement('i');const hue=Math.random()*360;const size=big?6+Math.random()*6:4+Math.random()*6;e.style.cssText=`left:${Math.random()*100}%;width:${size}px;height:${size*1.5}px;background:hsl(${hue},85%,60%);animation-delay:${Math.random()*.5}s;--x:${(Math.random()-.5)*400}px;--r:${Math.random()*1080-540}deg;border-radius:${Math.random()>.5?'2px':'50%'}`;w.appendChild(e)}document.body.appendChild(w);setTimeout(()=>w.remove(),big?4200:2700)}
 function Sparkles(){const sparks=useMemo(()=>Array.from({length:20},(_,i)=>({i,l:3+((i*17)%31)/10,t:((i*13)%37)/10,d:`${(i*47+11)%100}%`,b:`${(i*29+7)%100}%`,s:1+(i%3)})),[]);return<div className="sparkles">{sparks.map(s=><i key={s.i}style={{left:s.d,top:s.b,width:s.s+'px',height:s.s+'px',animationDelay:s.t+'s',animationDuration:s.l+'s'}}/>)}</div>}
 function CountUp({n,dur=900,decimals=0}:{n:number;dur?:number;decimals?:number}){const[v,setV]=useState(0);useEffect(()=>{if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){setV(n);return}let raf=0;const t0=performance.now();const step=(t:number)=>{const p=Math.min((t-t0)/dur,1);const eased=1-Math.pow(1-p,3);setV(n*eased);if(p<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);return()=>cancelAnimationFrame(raf)},[n,dur]);return<>{decimals?Math.round(v*Math.pow(10,decimals))/Math.pow(10,decimals):Math.round(v)}</>}
@@ -231,7 +233,7 @@ const QUOTES:{t:string;s:string}[]=[
  {t:'Sätt ett konkret mål för nästa timme.',s:'Gör det litet nog att börja nu.'},
  {t:'Ge feedback på beteende, inte person.',s:'Respekt och tydlighet går hand i hand.'},
 ];
-function Motivation({seller}:{seller?:boolean}){
+function Motivation({seller,live}:{seller?:boolean;live?:string}){
   const[i,setI]=useState(0);
   useEffect(()=>{
     const day=today();
@@ -241,6 +243,7 @@ function Motivation({seller}:{seller?:boolean}){
   const q=QUOTES[(i+(seller?0:3))%QUOTES.length];
   return<section className="motiv"aria-label={seller?'Dagens fokus':'Coachens fokus'}aria-live="off">
     <div className="motiv-k">{seller?'DAGENS DRIV':'COACHENS FOKUS'}</div>
+    {live&&<div className="motiv-live"role="status">{live}</div>}
     <p className="motiv-q"key={'q'+i}>{q.t}</p>
     <div className="motiv-s"key={'s'+i}>{q.s}</div>
     <button type="button"className="motiv-next"aria-label="Visa nästa fokus"title="Visa nästa fokus"onClick={()=>setI(v=>(v+1)%QUOTES.length)}>↻</button>
@@ -378,22 +381,29 @@ function Freshness({at,onRefresh}:{at:number;onRefresh:()=>Promise<void>}){
   const[busy,setBusy]=useState(false);const t=at?new Date(at).toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}):'–';
   return<button type="button"className="fresh"title={at?`Senast uppdaterad ${t}. Uppdatera nu.`:'Ingen uppdatering ännu. Försök igen.'}aria-label={busy?'Uppdaterar siffrorna':`Uppdatera siffrorna, senast ${t}`}aria-busy={busy}disabled={busy}onClick={async()=>{setBusy(true);try{await onRefresh()}finally{setBusy(false)}}}><span className={busy?'spin':''}aria-hidden="true">⟳</span> {busy?'…':t}</button>
 }
-function NotificationPanel({open,alerts,unread,onClose,onOpenComments,anchorRef}:{open:boolean;alerts:string[];unread:number;onClose:()=>void;onOpenComments:()=>void;anchorRef:{current:HTMLDivElement|null}}){
-  const[permission,setPermission]=useState<NotificationPermission|'checking'|'unsupported'>('checking');const[placed,setPlaced]=useState(false);const panelRef=useRef<HTMLElement>(null);
-  useEffect(()=>{setPermission(typeof Notification==='undefined'?'unsupported':Notification.permission)},[]);
-  useEffect(()=>{if(!open){setPlaced(false);return}const place=()=>{const anchor=anchorRef.current,panel=panelRef.current;if(!anchor||!panel)return;if(window.innerWidth>820){const r=anchor.getBoundingClientRect(),w=Math.min(365,window.innerWidth-24);panel.style.position='fixed';panel.style.left=`${Math.max(12,Math.min(r.right+13,window.innerWidth-w-12))}px`;panel.style.right='auto';panel.style.width=`${w}px`;panel.style.top='12px';panel.style.bottom='auto';const h=panel.offsetHeight;panel.style.top=`${Math.max(12,Math.min(r.bottom-h,window.innerHeight-h-12))}px`}else{panel.style.position='fixed';panel.style.left='';panel.style.right='';panel.style.top='';panel.style.bottom='';panel.style.width=''}setPlaced(true)};place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true)}},[open,anchorRef]);
-  const signals=alerts.filter(x=>!x.toLowerCase().includes('kommentar'));
+function NotificationPanel({open,alerts,unread,onClose,onOpenComments,anchorRef,readSet,onMarkAll}:{open:boolean;alerts:string[];unread:number;onClose:()=>void;onOpenComments:()=>void;anchorRef:{current:HTMLDivElement|null};readSet:string[];onMarkAll:()=>void}){
+  const[permission,setPermission]=useState<NotificationPermission|'checking'|'unsupported'>('checking');const[placed,setPlaced]=useState(false);const[host,setHost]=useState<Element|null>(null);const panelRef=useRef<HTMLElement>(null);
+  useEffect(()=>{setPermission(typeof Notification==='undefined'?'unsupported':Notification.permission);setHost(document.querySelector('.app'))},[]);
+  useEffect(()=>{if(!open||!host){setPlaced(false);return}
+    const place=()=>{const anchor=anchorRef.current,panel=panelRef.current;if(!anchor||!panel)return;
+      if(window.innerWidth>820){const r=anchor.getBoundingClientRect(),w=Math.min(380,window.innerWidth-24);panel.style.position='fixed';panel.style.width=`${w}px`;panel.style.left=`${Math.max(12,Math.min(r.right-w,window.innerWidth-w-12))}px`;panel.style.right='auto';panel.style.bottom='auto';panel.style.top=`${r.bottom+10}px`;panel.style.transformOrigin='top right'}
+      else{panel.style.position='fixed';panel.style.left='';panel.style.right='';panel.style.top='';panel.style.bottom='';panel.style.width=''}
+      setPlaced(true)};
+    place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true)}},[open,host,anchorRef]);
+  const signals=alerts.filter(x=>!x.toLowerCase().includes('kommentar'));const fresh=signals.filter(x=>!readSet.includes(x)).length;
+  const glyph=(t:string)=>/rekord/i.test(t)?'★':/mål/i.test(t)?'◎':/tempo|trend|vecka|månad/i.test(t)?'↗':'◈';
   const requestPermission=()=>{if(typeof Notification==='undefined')return;void Notification.requestPermission().then(setPermission).catch(()=>setPermission('denied'))};
-  return<section ref={panelRef}id="notification-center"className="notification-pop c"data-placed={placed?'true':'false'}role="region"aria-label="Notiscenter"hidden={!open}>
+  if(!host)return null;
+  return createPortal(<section ref={panelRef}id="notification-center"className="notification-pop c"data-placed={placed?'true':'false'}role="region"aria-label="Notiscenter"hidden={!open}>
     <div className="notification-head"><div className="notification-emblem"aria-hidden="true">⌁</div><div><div className="notification-eyebrow">STILLEAFFE · LIVE</div><h3>Notiscenter</h3></div><button type="button"className="notification-close"onClick={onClose}aria-label="Stäng notiscenter">×</button></div>
-    <div className="notification-summary">{signals.length?`${signals.length} lägesnotis${signals.length===1?'':'er'}`:unread?`${unread} oläst${unread===1?'':'a'} kommentar${unread===1?'':'er'}`:'Inga aktiva notiser just nu'}</div>
+    <div className="notification-summary">{signals.length?`${signals.length} lägesnotis${signals.length===1?'':'er'}${fresh?` · ${fresh} nya`:' · alla lästa'}`:unread?`${unread} oläst${unread===1?'':'a'} kommentar${unread===1?'':'er'}`:'Inga aktiva notiser just nu'}</div>
     <div className="notification-list"aria-live="polite">
-      {signals.map((item,i)=><article className="notification-item"key={item}><span className="notification-item-glyph"aria-hidden="true">{i===0?'↗':'◈'}</span><p>{item}</p></article>)}
-      {unread>0&&<article className="notification-item notification-comments"><span className="notification-item-glyph"aria-hidden="true">✎</span><p><b>{unread} oläst{unread===1?'':'a'} kommentar{unread===1?'':'er'}</b><small>I Kommentarer · markeras som läst när du öppnar</small></p><button type="button"className="notification-open"onClick={onOpenComments}>Visa ↗</button></article>}
+      {signals.map(item=><article className={'notification-item'+(readSet.includes(item)?'':' is-new')}key={item}><span className="notification-item-glyph"aria-hidden="true">{glyph(item)}</span><p>{item}</p></article>)}
+      {unread>0&&<article className="notification-item notification-comments is-new"><span className="notification-item-glyph"aria-hidden="true">✎</span><p><b>{unread} oläst{unread===1?'':'a'} kommentar{unread===1?'':'er'}</b><small>I Kommentarer · markeras som läst när du öppnar</small></p><button type="button"className="notification-open"onClick={onOpenComments}>Visa ↗</button></article>}
       {!signals.length&&!unread&&<div className="notification-empty"><span aria-hidden="true">✓</span><b>Inget som väntar</b><p>Nya lägesnotiser visas här när det finns något att följa upp.</p></div>}
     </div>
-    <div className="notification-footer"><span className={'permission-dot '+(permission==='granted'?'is-on':'')}/><span className="notification-permission-text">{permission==='granted'?'Skrivbordsnotiser aktiverade':permission==='denied'?'Notiser blockerade i webbläsaren':permission==='unsupported'?'Skrivbordsnotiser stöds inte här':permission==='checking'?'Kontrollerar notistillstånd':'Skrivbordsnotiser av'}</span>{permission==='default'&&<button type="button"className="notification-enable"onClick={requestPermission}>Aktivera</button>}</div>
-  </section>;
+    <div className="notification-footer"><span className={'permission-dot '+(permission==='granted'?'is-on':'')}/><span className="notification-permission-text">{permission==='granted'?'Skrivbordsnotiser aktiverade':permission==='denied'?'Notiser blockerade i webbläsaren':permission==='unsupported'?'Skrivbordsnotiser stöds inte här':permission==='checking'?'Kontrollerar notistillstånd':'Skrivbordsnotiser av'}</span>{permission==='default'&&<button type="button"className="notification-enable"onClick={requestPermission}>Aktivera</button>}{fresh>0&&<button type="button"className="notification-enable"onClick={onMarkAll}>Markera lästa</button>}</div>
+  </section>,host);
 }
 function NetStatus({onReconnect}:{onReconnect:()=>void}){
   const[off,setOff]=useState(false);
@@ -511,6 +521,22 @@ function Bars3D({rows}:{rows:Row[]}){
   </section>
 }
 
+function CoinStack({ts,dg,hasToday}:{ts:number;dg:number;hasToday:boolean}){
+  const slots=Math.min(24,Math.max(dg,ts,1)),filled=Math.min(ts,slots),reached=dg>0&&ts>=dg&&hasToday;
+  return<section className={'c coin-card'+(reached?' reached':'')}aria-label="Dagens mynthög"><div className="k">Dagens mynthög</div>
+    <div className="coin-stage"aria-hidden="true"><div className="coin-stack">{Array.from({length:slots},(_,i)=><i key={i}className={'coin'+(i<filled&&hasToday?' on':'')}style={{'--n':i}as any}/>)}</div></div>
+    <div className="coin-meta"><b className="num">{hasToday?ts:'–'}</b><span>{dg?` av ${dg} sälj`:' sälj'}</span></div>
+    <div className="s">{!hasToday?'Ingen registrering idag – högen fylls när siffror läggs in.':reached?'Dagsmålet är nått – högen är full. 🔔':dg?`${Math.max(0,dg-ts)} kvar till dagsmålet.`:'Sätt ett dagsmål för att se hur högen fylls.'}</div></section>
+}
+const LEVELS=[{n:'Rookie',min:0},{n:'Closer',min:20},{n:'Dealmaker',min:50},{n:'Rainmaker',min:90},{n:'Wolf',min:140}];
+function LevelCard({rows}:{rows:Row[]}){
+  const pre=today().slice(0,7),ms=rows.filter(r=>r.entry_date.startsWith(pre)).reduce((t,r)=>t+Number(r.sales||0),0);
+  let li=0;LEVELS.forEach((l,i)=>{if(ms>=l.min)li=i});const cur=LEVELS[li],next=LEVELS[li+1],p=next?Math.round((ms-cur.min)/(next.min-cur.min)*100):100;
+  return<section className="c lvl"aria-label="Månadens nivå"><div className="k">Nivå · månadens sälj ({ms})</div><div className="lvl-n">{cur.n}</div><div className="bar"><i style={{width:p+'%'}}/></div>
+    <div className="s">{next?`${next.min-ms} sälj kvar till ${next.n}`:'Högsta nivån nådd den här månaden.'}</div>
+    <ol className="lvl-steps">{LEVELS.map((l,i)=><li key={l.n}className={i<=li?'on':''}><i/><span>{l.n}</span><small>{l.min}+</small></li>)}</ol></section>
+}
+
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
@@ -528,7 +554,7 @@ export default function App(){
   useEffect(()=>{if(role!=='manager'||loading)return;setShowAffeTease(true);const timer=window.setTimeout(()=>setShowAffeTease(false),10_000);return()=>window.clearTimeout(timer)},[role,loading]);
   const[cm,setCm]=useState<CItem[]>([]);const[unread,setUnread]=useState(0);
   const[cText,setCText]=useState('');const[cDate,setCDate]=useState('');
-  const[bell,setBell]=useState(false);const[err,setErr]=useState('');
+  const[bell,setBell]=useState(false);const[readSet,setReadSet]=useState<string[]>([]);const[bellRing,setBellRing]=useState(false);const badgeRef=useRef(-1);const[err,setErr]=useState('');
   const[theme,setTheme]=useState<string>('default');const[themeInit,setThemeInit]=useState(false);const[depthMode,setDepthMode]=useState<'studio'|'quiet'>('studio');
   const[curPw,setCurPw]=useState('');const[newPw,setNewPw]=useState('');const[newPw2,setNewPw2]=useState('');const[pwMsg,setPwMsg]=useState<{t:string;ok?:boolean}|null>(null);
   const[activity,setActivity]=useState<Activity[]>([]);
@@ -555,6 +581,7 @@ export default function App(){
 
   // Favicon + document title live update
   useEffect(()=>{if(loading)return;const ts=rows.find(r=>r.entry_date===today())?.sales||0;const p=pct(ts,g.daily_sales);const accent=getComputedStyle(document.documentElement).getPropertyValue('--gr').trim()||'#58d4ab';const warning=getComputedStyle(document.documentElement).getPropertyValue('--am').trim()||'#d8b05e';const title=`${ts}/${g.daily_sales} (${p}%) · Säljdashboard`;document.title=title;const f=document.querySelector('link[rel="icon"]')as HTMLLinkElement||document.createElement('link');if(!f.parentElement){f.rel='icon';document.head.appendChild(f)}const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#06080b';ctx.fillRect(0,0,64,64);ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,2*Math.PI-Math.PI/2);ctx.stroke();ctx.strokeStyle=ts>=g.daily_sales?accent:p>=70?warning:'#64707d';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,-Math.PI/2+2*Math.PI*(Math.min(p,100)/100));ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 22px Inter,system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(ts),32,32);f.href=canvas.toDataURL('image/png')},[rows,g,loading,role]);
+  useEffect(()=>{if(loading)return;const t=rows.find(r=>r.entry_date===today()),goal=Number(g.daily_sales||0);if(!t||goal<=0||Number(t.sales)<goal)return;const k='sd_bell_'+today();try{if(localStorage.getItem(k))return;localStorage.setItem(k,'1')}catch{return}if(sound)ringBell();say('🔔 Dagsmålet är nått – klockan ringer!');document.documentElement.classList.add('bell-flash');setTimeout(()=>document.documentElement.classList.remove('bell-flash'),2200)},[rows,g,loading]);
 
   // Command palette (Ctrl/Cmd+K)
   useEffect(()=>{const on=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCmd(v=>!v)}else if(e.key==='Escape'){setCmd(false);setBell(false)}};window.addEventListener('keydown',on);return()=>window.removeEventListener('keydown',on)},[]);
@@ -595,9 +622,11 @@ export default function App(){
   const loadC=useCallback(async()=>{try{const j=await(await fetch('/api/comments',{credentials:'same-origin'})).json();if(j.items){setCm(j.items);setUnread(j.unread||0)}}catch{}},[]);
   useEffect(()=>{const t=setInterval(loadC,30000);return()=>clearInterval(t)},[loadC]);
   useEffect(()=>{if(tab==='comments')fetch('/api/comments',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:'{"action":"seen"}'}).then(()=>setUnread(0)).catch(()=>{})},[tab]);
-  useEffect(()=>{if(!bell)return;const on=(e:MouseEvent)=>{if(bellRef.current&&!bellRef.current.contains(e.target as Node))setBell(false)};document.addEventListener('mousedown',on);return()=>document.removeEventListener('mousedown',on)},[bell]);
+  useEffect(()=>{if(!bell)return;const on=(e:MouseEvent)=>{const t=e.target as HTMLElement;if(bellRef.current&&!bellRef.current.contains(t)&&!t.closest?.('#notification-center'))setBell(false)};document.addEventListener('mousedown',on);return()=>document.removeEventListener('mousedown',on)},[bell]);
   useEffect(()=>{if(loading||typeof Notification==='undefined'||Notification.permission!=='granted')return;let sent:string[]=[];try{sent=JSON.parse(localStorage.getItem('sd_n')||'[]')}catch{};const key=today();const fresh=buildAlerts(rows,g,role,unread).filter(x=>!sent.includes(key+x));fresh.forEach(x=>new Notification('Säljdashboard',{body:x}));if(fresh.length)try{localStorage.setItem('sd_n',JSON.stringify([...sent.slice(-30),...fresh.map(x=>key+x)]))}catch{}},[rows,g,role,unread,loading]);
 
+  useEffect(()=>{try{setReadSet(JSON.parse(localStorage.getItem('sd_nread_'+today())||'[]'))}catch{}},[]);
+  useEffect(()=>{if(loading)return;const cnt=buildAlerts(rows,g,role,unread).filter(x=>!readSet.includes(x)).length+unread;if(badgeRef.current>=0&&cnt>badgeRef.current){setBellRing(true);setTimeout(()=>setBellRing(false),1700)}badgeRef.current=cnt},[rows,g,role,unread,loading,readSet]);
   function buildAlerts(rows:Row[],g:Goals,role:string,unread:number):string[]{const a:string[]=[];const hr=new Date().getHours();const t=rows.find(r=>r.entry_date===today());const ms=sum(rows.filter(r=>mon(r.entry_date)===mon(today())),'sales');const plan=g.monthly_sales*(workdaysElapsed()/Math.max(workdaysTotal(),1));const who=role==='seller'?'Du':'Stille';if(unread)a.push(`${unread} ny${unread>1?'a kommentarer':' kommentar'}`);if(!rows.length)return a;if(hr>=15&&!t)a.push(`${who} har inget registrerat idag än`);else if(t&&hr>=15&&t.sales<g.daily_sales)a.push(`Dagsmål: ${g.daily_sales-t.sales} sälj kvar`);if(plan-ms>=2)a.push(`${who} ligger ${f1(plan-ms)} sälj efter planen`);else if(ms-plan>=3)a.push(`${who} ligger ${f1(ms-plan)} sälj före planen 🔥`);return a}
 
   async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const d=String(f.get('d')),s=Number(f.get('s')),tb=Number(f.get('t'));const hh=String(f.get('h')||''),h=hh===''?null:Number(hh);if(!Number.isInteger(s)||s<0||!(tb>=0)||(h!==null&&!(h>=0&&h<=24)))return alert('Ogiltiga värden.');const ex=rows.find(r=>r.entry_date===d&&r.id!==edit);if(ex&&!confirm(`Det finns redan en registrering för ${d} (${ex.sales} sälj). Ersätta?`))return;const wasGoal=(rows.find(r=>r.entry_date===d)?.sales||0)>=g.daily_sales;const r=await api({action:'upsert',entry_date:d,sales:s,tb_sek:tb,hours:h,note:String(f.get('n')||'').trim()||null,mood:moodSel,rating:Number(f.get('rating'))||null,tags:String(f.get('tags')||'').split(',').map(x=>x.trim()).filter(Boolean),replace_id:edit});if(r.error)return alert('Kunde inte spara: '+r.error);if(s>=g.daily_sales&&!wasGoal&&d===today()){confetti(true);if(sound)chime();buzz([40,25,80])}else if(sound){beep(660,.1,'triangle',.05);buzz(18)}setEdit(null);setMoodSel(null);await load();setTab('overview');say(ex?'Ersatte registrering':'Sparat ✓')}
@@ -667,6 +696,8 @@ export default function App(){
   const priorWeeks=Array.from({length:7},(_,i)=>{const d=new Date(weekStartDate);d.setDate(d.getDate()-7*(7-i));const key=weekKey(d),total=weekTotals.get(key);return{key,sales:total?.sales||0,tb:total?.tb||0}});
   const wks=[...priorWeeks,{key:currentWeekKey,sales:sum(currentWeekRows,'sales'),tb:sum(currentWeekRows,'tb_sek')}];
   const er=edit?rows.find(r=>r.id===edit):null;const alerts=buildAlerts(rows,g,role,unread);
+  const badge=alerts.filter(x=>!readSet.includes(x)).length+unread;
+  const markAllRead=()=>{const n=Array.from(new Set([...readSet,...alerts]));setReadSet(n);try{localStorage.setItem('sd_nread_'+today(),JSON.stringify(n))}catch{}};
   const greet=greeting();const dayName=new Date().toLocaleDateString('sv-SE',{weekday:'long',day:'numeric',month:'long'});
   const pctToday=todayRow?pct(ts,g.daily_sales):0;
   const pinnedComments=cm.filter(c=>c.pinned);const unpinned=cm.filter(c=>!c.pinned);
@@ -681,6 +712,8 @@ export default function App(){
   const coachLocalNow=new Date(),coachIsWorkday=coachLocalNow.getDay()>=1&&coachLocalNow.getDay()<=5;
   const coachNeedsStep=rows.length>0&&((paceReliable&&ahead< -Math.max(2,g.monthly_sales*.04))||(coachIsWorkday&&coachLocalNow.getHours()>=14&&!todayRow));
   const requiredPaceText=!paceReliable?`kan inte bedömas säkert (${registeredWorkdays} av ${elapsedWorkdays} arbetsdagar registrerade)`:remainingWorkdays>0?`cirka ${f1(requiredPerDay)} sälj per arbetsdag`:`månadens arbetsdagar är slut; ${fmt(monthlySalesGap)} sälj återstår till målet`;
+  const dgN=Number(g.daily_sales||0),hrNow=new Date().getHours();
+  const liveMsg=!todayRow?(hrNow<12?'Dagen är inte registrerad än – första samtalet sätter tonen.':'Ingen registrering för idag än – lägg in när du har siffror.'):Number(ts)===0?'Dagen är registrerad med 0 sälj – nästa samtal kan vända den.':dgN>0&&Number(ts)>=dgN?`Dagsmålet är nått (${ts}/${dgN}). Allt över är bonus. 🔔`:dgN>0&&Number(ts)>=dgN*.75?`Nära nu: ${dgN-Number(ts)} kvar till dagsmålet.`:dgN>0&&Number(ts)>=dgN*.5?`Över halvvägen – ${dgN-Number(ts)} kvar.`:dgN>0?`Du är igång: ${ts} av ${dgN}.`:`${ts} sälj hittills idag.`;
   const todayEvidence=todayRow?`${ts} av ${g.daily_sales} sälj`:'ingen registrering (behandla inte som noll)';
   const monthEvidence=monthHasData?`${ms} registrerade sälj av ${g.monthly_sales}; ${registeredWorkdays} av ${elapsedWorkdays} vardagar registrerade`:'inga registreringar hittills';
   const paceEvidence=!paceReliable?`kan inte bedömas säkert (${registeredWorkdays}/${elapsedWorkdays} registrerade vardagar)`: `${ahead<0?`${f1(Math.abs(ahead))} sälj efter`:`${f1(ahead)} sälj före`} planen`;
@@ -705,17 +738,13 @@ export default function App(){
     <aside aria-label="Navigation">
       <div className="logo"><i aria-hidden="true"><span>S</span><span>A</span></i><div className="t"><div>Säljdashboard</div><small>Stille &amp; Affe</small></div></div>
       {visibleTabs.map(t=><button key={t.id}className={'nv '+(tab===t.id?'on':'')}onClick={()=>{setTab(t.id);setEdit(null);setMoodSel(null);window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}data-tip={t.label}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
-      <div className="notification-dock"ref={bellRef}>
-        <button type="button"className={'notification-trigger'+(bell?' open':'')}onClick={()=>setBell(v=>!v)}aria-label={alerts.length?`Notiser, ${alerts.length} aktiva`:'Notiser'}aria-expanded={bell}aria-controls="notification-center"title="Öppna notiscenter">
-          <span className="notification-trigger-icon"aria-hidden="true"><svg viewBox="0 0 24 24"fill="none"focusable="false"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><span className="notification-trigger-label">Notiser</span>{alerts.length>0&&<span className="notification-count"aria-hidden="true">{alerts.length>9?'9+':alerts.length}</span>}
-        </button>
-        <NotificationPanel open={bell}alerts={alerts}unread={unread}anchorRef={bellRef}onClose={()=>setBell(false)}onOpenComments={()=>{setBell(false);setTab('comments');window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}/>
-      </div>
       <div className="who"><b>{can?'Stille':'Affe'}</b><span className="role">{can?'Säljare':'Chef'}</span><div className="row"style={{marginTop:8,gap:6}}><button className="b sm ghost"onClick={()=>setSound(s=>!s)}title="Ljud">{sound?'🔊':'🔇'}</button><button type="button"className="b sm ghost"onClick={doLogout}>Logga ut</button></div></div>
     </aside>
     <main ref={mainRef}key={tab}className="tab-wrap">
       <div className="top">
         <span className="chip">{visibleTabs.find(t=>t.id===tab)?.label||'Översikt'}{tab!=='overview'&&<span className="muted"> · {can?'Stille':'Affe'}</span>}<span className="muted"style={{marginLeft:10,opacity:.5}}>⌘K</span><Freshness at={fetchedAt}onRefresh={load}/></span>
+        <div className="notif-top"ref={bellRef}><button type="button"className={'notification-trigger'+(bell?' open':'')+(bellRing?' ring':'')}onClick={()=>{if(bell)markAllRead();setBell(v=>!v)}}aria-label={badge>0?`Notiser, ${badge} nya`:'Notiser'}aria-expanded={bell}aria-controls="notification-center"title="Notiser"><span className="notification-trigger-icon"aria-hidden="true"><svg viewBox="0 0 24 24"fill="none"focusable="false"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><span className="notification-trigger-label">Notiser</span>{badge>0&&<span className="notification-count"aria-hidden="true">{badge>9?'9+':badge}</span>}</button></div>
+        <NotificationPanel open={bell}alerts={alerts}unread={unread}anchorRef={bellRef}readSet={readSet}onMarkAll={markAllRead}onClose={()=>{markAllRead();setBell(false)}}onOpenComments={()=>{setBell(false);setTab('comments');window.scrollTo({top:0,behavior:'smooth'})}}/>
 
       </div>
       {role==='manager'&&tab==='overview'&&showAffeTease&&<section className="affe-tease"role="status"aria-live="polite"><span className="affe-tease-icon"aria-hidden="true">😏</span><div><div className="affe-tease-k">En snabb pik till Affe</div><p>Du har så bra koll på Stilles siffror att man nästan tror att du säljer själv 😄 Men undrar — vem säljer bäst? 😉</p></div><button type="button"className="affe-tease-close"aria-label="Stäng meddelandet"onClick={()=>setShowAffeTease(false)}>×</button><div className="affe-tease-progress"aria-hidden="true"><i/></div></section>}
@@ -725,9 +754,10 @@ export default function App(){
         <h2>{can?`${greet}, Stille`:'Affes ledningsvy'} <span className="ok">{can?'👋':'◈'}</span></h2>
         <p className="sub">{can?<>{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></>:`Stilles resultat · ${dayName} · Skrivskyddad översikt`}</p>
         <GoalSnapshot role={can?'seller':'manager'}goal={g}todayRow={todayRow}onEdit={can?()=>setTab('goals'):undefined}/>
-        <Motivation seller={can}/>
+        <Motivation seller={can}live={liveMsg}/>
         <Checklist can={can}hasToday={!!todayRow}/>
         <Bars3D rows={rows}/>
+        <div className="wolf-row"><CoinStack ts={Number(ts)}dg={Number(g.daily_sales||0)}hasToday={!!todayRow}/><LevelCard rows={rows}/></div>
         {can&&<SellerExtras rows={rows}g={g}ts={ts}tt={tt}hasToday={!!todayRow}paceReliable={paceReliable}registeredWorkdays={registeredWorkdays}elapsedWorkdays={elapsedWorkdays}remainingWorkdays={remainingWorkdays}sound={sound}/>}
         {!can&&<div className="mo-two"style={{marginBottom:16}}><StreakDots rows={rows}/><WeekdayInsight rows={rows}/></div>}
 
