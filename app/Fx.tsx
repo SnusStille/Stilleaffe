@@ -42,10 +42,22 @@ export default function Fx() {
         });
       };
       const leave = () => { if (cur) reset(cur); cur = null; };
+      let pr = 0;
+      const par = (e: PointerEvent) => {
+        cancelAnimationFrame(pr);
+        pr = requestAnimationFrame(() => {
+          const rt = document.documentElement;
+          rt.style.setProperty('--px', (e.clientX / window.innerWidth - 0.5).toFixed(3));
+          rt.style.setProperty('--py', (e.clientY / window.innerHeight - 0.5).toFixed(3));
+        });
+      };
+      document.addEventListener('pointermove', par, { passive: true });
       document.addEventListener('pointermove', move, { passive: true });
       document.documentElement.addEventListener('pointerleave', leave);
       cleanup = () => {
         cancelAnimationFrame(raf);
+        cancelAnimationFrame(pr);
+        document.removeEventListener('pointermove', par);
         document.removeEventListener('pointerdown', ripple);
         document.removeEventListener('pointermove', move);
         document.documentElement.removeEventListener('pointerleave', leave);

@@ -204,7 +204,7 @@ function Motivation({seller}:{seller?:boolean}){
   const[i,setI]=useState(()=>Math.floor(Math.random()*QUOTES.length));const[n,setN]=useState(0);
   useEffect(()=>{const id=window.setInterval(()=>{setI(v=>(v+1+Math.floor(Math.random()*4))%QUOTES.length);setN(v=>v+1)},24000);return()=>window.clearInterval(id)},[]);
   const q=QUOTES[i];
-  return<section className="motiv"aria-live="off"><div className="motiv-k">{seller?'DAGENS DRIV':'STILLES DRIV'}</div><p key={n}className="motiv-q">{q.t}</p><div key={'s'+n}className="motiv-s">{q.s}</div></section>
+  return<section className="motiv"aria-live="off"><div className="m3d"aria-hidden="true"><i/><i/><i/><b/></div><div className="motiv-k">{seller?'DAGENS DRIV':'STILLES DRIV'}</div><p key={n}className="motiv-q">{q.t}</p><div key={'s'+n}className="motiv-s">{q.s}</div></section>
 }
 function ManagerOverview({rows,g,fetchedAt,dayName}:{rows:Row[];g:Goals;fetchedAt:number;dayName:string}){
   const[span,setSpan]=useState(30);
@@ -243,7 +243,7 @@ function StreakDots({rows}:{rows:Row[]}){
   const now=new Date(),has=new Set(rows.filter(r=>Number(r.sales)>0).map(r=>r.entry_date));
   const days=Array.from({length:14},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-(13-i));return{k:isoD(d),w:d.getDay()}});
   const n=days.filter(d=>has.has(d.k)).length;
-  return<div className="c dots"><div className="k">Rutinrad · 14 dagar</div><div className="dots-g">{days.map(d=><i key={d.k}title={d.k}className={(has.has(d.k)?'on':'')+(d.w===0||d.w===6?' we':'')}/>)}</div><div className="s">{n} av 14 dagar med sälj</div></div>
+  return<div className="c dots"><div className="k">Rutinrad · 14 dagar</div><div className="dots-g">{days.map(d=><i key={d.k}title={d.k}className={(has.has(d.k)?'on':'')+(d.w===0||d.w===6?' we':'')}/>)}</div><div className="s">{n} av 14 dagar med sälj · längsta rad {longestStreak(rows)} arbetsdagar</div></div>
 }
 
 /* 2. Veckodagsanalys */
@@ -300,6 +300,80 @@ function SellerExtras({rows,g,ts,tt,hasToday}:{rows:Row[];g:Goals;ts:number;tt:n
   </div>
 }
 
+/* ===== v16: tio nya saker för både Stille och Affe ===== */
+function longestStreak(rows:Row[]){
+  const ds=Array.from(new Set(rows.filter(r=>Number(r.sales)>0).map(r=>r.entry_date))).sort();let best=0,cur=0,prev='';
+  const nextWd=(k:string)=>{const d=new Date(k+'T12:00:00');do{d.setDate(d.getDate()+1)}while(d.getDay()===0||d.getDay()===6);return isoD(d)};
+  for(const k of ds){cur=prev&&nextWd(prev)===k?cur+1:1;if(cur>best)best=cur;prev=k}
+  return best
+}
+function Freshness({at,onRefresh}:{at:number;onRefresh:()=>any}){
+  const[busy,setBusy]=useState(false);const t=at?new Date(at).toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}):'–';
+  return<button className="fresh"title="Uppdatera nu"aria-label="Uppdatera siffrorna"onClick={async()=>{setBusy(true);try{await onRefresh()}finally{setTimeout(()=>setBusy(false),500)}}}><span className={busy?'spin':''}>⟳</span> {t}</button>
+}
+function NetStatus(){
+  const[off,setOff]=useState(false);
+  useEffect(()=>{const u=()=>setOff(!navigator.onLine);u();window.addEventListener('online',u);window.addEventListener('offline',u);return()=>{window.removeEventListener('online',u);window.removeEventListener('offline',u)}},[]);
+  return off?<div className="netoff"role="status">Du är offline – siffrorna uppdateras när anslutningen är tillbaka.</div>:null
+}
+function ScrollPill(){
+  const[st,setSt]=useState<'hide'|'down'|'up'>('hide');
+  useEffect(()=>{const f=()=>{const el=document.documentElement;setSt(el.scrollHeight<=window.innerHeight+160?'hide':window.scrollY<240?'down':'up')};f();window.addEventListener('scroll',f,{passive:true});window.addEventListener('resize',f);const id=window.setInterval(f,1500);return()=>{window.removeEventListener('scroll',f);window.removeEventListener('resize',f);window.clearInterval(id)}},[]);
+  if(st==='hide')return null;
+  return<button className="scrollpill"aria-label={st==='down'?'Till botten':'Till toppen'}onClick={()=>window.scrollTo({top:st==='down'?document.documentElement.scrollHeight:0,behavior:'smooth'})}>{st==='down'?'↓':'↑'}</button>
+}
+function Checklist({can}:{can:boolean}){
+  const items=can?['Dagens siffror registrerade','Anteckning om dagen skriven','Fokus för imorgon bestämt']:['Dagens siffror kollade','Feedback skickad till Stille','Veckomålet kontrollerat'];
+  const key='sd_chk_'+(can?'s':'m')+'_'+isoD(new Date());const[on,setOn]=useState<boolean[]>(items.map(()=>false));
+  useEffect(()=>{try{const v=JSON.parse(localStorage.getItem(key)||'[]');setOn(items.map((_,i)=>!!v[i]))}catch{}},[key]);
+  const flip=(i:number)=>{const n=on.map((x,j)=>j===i?!x:x);setOn(n);try{localStorage.setItem(key,JSON.stringify(n))}catch{}};
+  const done=on.filter(Boolean).length;
+  return<div className="c chk"><div className="k">{can?'Dagens avslut':'Chefens koll'} · {done}/{items.length}</div><div className="chk-g">{items.map((t,i)=><button key={i}className={'chk-i'+(on[i]?' on':'')}aria-pressed={on[i]}onClick={()=>flip(i)}><i>{on[i]?'✓':''}</i>{t}</button>)}</div>{done===items.length&&<div className="s"style={{marginTop:8}}>Allt klart – snyggt jobbat idag. 🎯</div>}</div>
+}
+function MonthSummary({rows,g}:{rows:Row[];g:Goals}){
+  const[copied,setCopied]=useState(false);
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth(),pre=(a:number,b:number)=>a+'-'+pad2(b+1);
+  const pmD=new Date(y,m-1,1),cm=rows.filter(r=>r.entry_date.startsWith(pre(y,m))),pm=rows.filter(r=>r.entry_date.startsWith(pre(pmD.getFullYear(),pmD.getMonth())));
+  const S=(x:Row[])=>x.reduce((t,r)=>t+Number(r.sales||0),0),T=(x:Row[])=>x.reduce((t,r)=>t+Number(r.tb_sek||0),0),H=(x:Row[])=>x.reduce((t,r)=>t+Number((r as any).hours||0),0);
+  const cs=S(cm),ct=T(cm),ps=S(pm),pt=T(pm),days=cm.filter(r=>Number(r.sales)>0).length,best=[...cm].sort((a,b)=>Number(b.sales)-Number(a.sales))[0];
+  const tbPer=cs?ct/cs:0,ptb=ps?pt/ps:0,hrs=H(cm),perHr=hrs>0?cs/hrs:0,diff=ps>0?Math.round((cs-ps)/ps*100):null;
+  const l30=rows.filter(r=>r.entry_date>=isoD(new Date(y,m,now.getDate()-29))&&Number(r.sales)>0),avg30=l30.length?S(l30)/l30.length:0,suggest=avg30?Math.max(1,Math.ceil(avg30*1.1)):0;
+  const mn=now.toLocaleDateString('sv-SE',{month:'long'});
+  const text=cs?`${mn[0].toUpperCase()+mn.slice(1)} hittills: ${cs} sälj och ${sv(ct)} kr TB på ${days} säljdagar${best?`. Bästa dag: ${best.entry_date} med ${Number(best.sales)} sälj`:''}${diff!==null?`. ${diff>=0?'Upp':'Ner'} ${Math.abs(diff)}% mot föregående månad`:''}.`:'Inga registrerade sälj den här månaden ännu.';
+  const dow=(now.getDay()+6)%7,a=isoD(new Date(y,m,now.getDate()-dow)),b=isoD(new Date(y,m,now.getDate()-dow-7)),wk=rows.filter(r=>r.entry_date>=a),pw=rows.filter(r=>r.entry_date>=b&&r.entry_date<a);
+  const wtxt=`Veckorapport: ${S(wk)} sälj, TB ${sv(T(wk))} kr hittills denna vecka${S(pw)?` (förra veckan ${S(pw)} sälj, ${sv(T(pw))} kr)`:''}.`;
+  const copy=async()=>{try{await navigator.clipboard.writeText(wtxt)}catch{const t=document.createElement('textarea');t.value=wtxt;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch{}t.remove()}setCopied(true);setTimeout(()=>setCopied(false),1800)};
+  return<div className="c msum"><div className="msum-h"><div className="k">Sammanfattning · {mn}</div><div className="row noprint"><button className="b ghost"onClick={copy}>{copied?'Kopierat ✓':'Kopiera veckorapport'}</button><button className="b ghost"onClick={()=>window.print()}>🖨 Skriv ut / PDF</button></div></div>
+    <p className="msum-t">{text}</p>
+    <div className="msum-g">
+      <div><span>TB per sälj</span><b className="num">{cs?sv(tbPer)+' kr':'–'}</b><small className={ptb&&tbPer>=ptb?'pos':'neu'}>{ptb?`${tbPer>=ptb?'▲':'▼'} mot ${sv(ptb)} kr förra månaden`:'Ingen jämförelse än'}</small></div>
+      <div><span>Sälj per timme</span><b className="num">{perHr?perHr.toFixed(2):'–'}</b><small>{hrs?`${hrs} h registrerade`:'Inga timmar registrerade'}</small></div>
+      <div><span>Förslag dagsmål</span><b className="num">{suggest||'–'}</b><small>{avg30?`Snitt ${avg30.toFixed(1)} + 10% · nu ${g.daily_sales}`:'Behöver mer data'}</small></div>
+      <div><span>Säljdagar</span><b className="num">{days}</b><small>längsta rad: {longestStreak(rows)} arbetsdagar</small></div>
+    </div></div>
+}
+function Compare({rows}:{rows:Row[]}){
+  const now=new Date(),d=(n:number)=>isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-n));
+  const[a1,setA1]=useState(d(6)),[a2,setA2]=useState(d(0)),[b1,setB1]=useState(d(13)),[b2,setB2]=useState(d(7));
+  const preset=(n:number)=>{setA1(d(n-1));setA2(d(0));setB1(d(2*n-1));setB2(d(n))};
+  const month=()=>{const y=now.getFullYear(),m=now.getMonth();setA1(isoD(new Date(y,m,1)));setA2(isoD(now));setB1(isoD(new Date(y,m-1,1)));setB2(isoD(new Date(y,m,0)))};
+  const agg=(f:string,t:string)=>{const x=rows.filter(r=>r.entry_date>=f&&r.entry_date<=t),s=x.reduce((q,r)=>q+Number(r.sales||0),0),tb=x.reduce((q,r)=>q+Number(r.tb_sek||0),0),dd=x.filter(r=>Number(r.sales)>0).length;return{s,tb,dd,avg:dd?s/dd:0}};
+  const A=agg(a1,a2),B=agg(b1,b2);
+  const line:[string,number,number,boolean][]=[['Sälj',A.s,B.s,false],['TB (kr)',A.tb,B.tb,false],['Säljdagar',A.dd,B.dd,false],['Snitt sälj/dag',A.avg,B.avg,true]];
+  return<div className="c cmp"><div className="msum-h"><div className="k">Jämför två perioder</div><div className="row noprint"><button className="b ghost"onClick={()=>preset(7)}>7 d mot 7 d</button><button className="b ghost"onClick={()=>preset(30)}>30 d mot 30 d</button><button className="b ghost"onClick={month}>Månad mot månad</button></div></div>
+    <div className="cmp-in"><div><label>Period A</label><div className="row"><input type="date"value={a1}onChange={e=>setA1(e.target.value)}/><input type="date"value={a2}onChange={e=>setA2(e.target.value)}/></div></div><div><label>Period B</label><div className="row"><input type="date"value={b1}onChange={e=>setB1(e.target.value)}/><input type="date"value={b2}onChange={e=>setB2(e.target.value)}/></div></div></div>
+    <table><thead><tr><th></th><th>A</th><th>B</th><th>Skillnad</th></tr></thead><tbody>{line.map(([k,x,y,dec])=>{const dl=y>0?Math.round((x-y)/y*100):null;return<tr key={k}><td>{k}</td><td className="num">{dec?x.toFixed(1):sv(x)}</td><td className="num">{dec?y.toFixed(1):sv(y)}</td><td className={'num '+(dl===null?'neu':dl>=0?'pos':'neg')}>{dl===null?'–':(dl>=0?'▲ ':'▼ ')+Math.abs(dl)+'%'}</td></tr>})}</tbody></table></div>
+}
+
+/* v17: riktig 3D – dina senaste 7 dagar som lutande stapelscen */
+function Bars3D({rows}:{rows:Row[]}){
+  const now=new Date(),td=isoD(now),L=['S','M','T','O','T','F','L'];
+  const days=Array.from({length:7},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-(6-i)),k=isoD(d),r=rows.find(x=>x.entry_date===k);return{k,w:L[d.getDay()],n:Number(r?.sales||0),tb:Number(r?.tb_sek||0)}});
+  const mx=Math.max(1,...days.map(d=>d.n)),tot=days.reduce((t,d)=>t+d.n,0),best=days.reduce((a,d)=>d.n>a.n?d:a,days[0]);
+  return<div className="c tilt b3"><div className="b3-h"><div><div className="k">Senaste 7 dagarna · 3D</div><div className="b3-tot num">{tot} <small>sälj</small></div></div><div className="s">{tot?`Bästa dag: ${best.w} (${best.n} sälj)`:'Inga sälj registrerade den senaste veckan'}</div></div>
+    <div className="b3-stage"aria-hidden="true"><div className="b3-scene">{days.map((d,i)=><div key={d.k}className={'b3-bar'+(d.k===td?' today':'')+(d.n===0?' zero':'')}style={{'--i':i,'--h':(d.n===0?8:Math.max(18,d.n/mx*150))+'px'}as any}title={`${d.k}: ${d.n} sälj · ${sv(d.tb)} kr`}><div className="f front"><b className="num">{d.n}</b><small>{d.w}</small></div><div className="f side"/><div className="f top"/></div>)}<div className="b3-floor"/></div></div></div>
+}
+
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
@@ -311,7 +385,7 @@ export default function App(){
   const[coachAi,setCoachAi]=useState('');const[coachBusy,setCoachBusy]=useState(false);const[autoCoach,setAutoCoach]=useState(true);
   const coachRequestKey=useRef('');
   const can=role==='seller';
-  const visibleTabs=can?TABS:TABS.filter(t=>t.id==='overview');
+  const visibleTabs=can?TABS:TABS.filter(t=>t.id!=='register');
   useEffect(()=>{document.documentElement.dataset.role=role},[role]);
   useEffect(()=>{if(role!=='manager'||loading)return;setShowAffeTease(true);const timer=window.setTimeout(()=>setShowAffeTease(false),10_000);return()=>window.clearTimeout(timer)},[role,loading]);
   const[cm,setCm]=useState<CItem[]>([]);const[unread,setUnread]=useState(0);
@@ -480,7 +554,6 @@ export default function App(){
       .catch(()=>{}).finally(()=>setCoachBusy(false));
   },[autoCoach,can,ks.configured,loading,coachNeedsStep,rows.length,remainingWorkdays,coachPrompt]);
 
-  useEffect(()=>{if(!can&&tab!=='overview')setTab('overview')},[can,tab]);
   if(loading)return<div className="skel"aria-busy="true"aria-label="Laddar"><div className="skel-h"/><div className="skel-g"><i/><i/><i/><i/></div><div className="skel-c"/><div className="skel-c short"/></div>;
   return<div className="app"><Sparkles/>
     <div ref={spotRef}className="spotlight hidden"aria-hidden="true"/>
@@ -491,7 +564,7 @@ export default function App(){
     </aside>
     <main ref={mainRef}key={tab}className="tab-wrap">
       <div className="top">
-        <span className="chip">{visibleTabs.find(t=>t.id===tab)?.label||'Översikt'}{tab!=='overview'&&<span className="muted"> · {can?'Stille':'Affe'}</span>}<span className="muted"style={{marginLeft:10,opacity:.5}}>⌘K</span></span>
+        <span className="chip">{visibleTabs.find(t=>t.id===tab)?.label||'Översikt'}{tab!=='overview'&&<span className="muted"> · {can?'Stille':'Affe'}</span>}<span className="muted"style={{marginLeft:10,opacity:.5}}>⌘K</span><Freshness at={fetchedAt}onRefresh={load}/></span>
         <div style={{position:'relative'}}ref={bellRef}>
           <button className="b bellb"onClick={()=>setBell(b=>!b)}aria-label="Notiser">🔔{alerts.length>0&&<i className="dot pulse-ring">{alerts.length}</i>}</button>
           {bell&&<div className="c pop"><div className="k">Notiser</div>{alerts.length?alerts.map(x=><p key={x}className="al">{x}</p>):<p className="s">Allt lugnt 👌</p>}{typeof Notification!=='undefined'&&Notification.permission==='default'&&<button className="b"onClick={()=>{Notification.requestPermission().then(()=>setBell(false))}}>Aktivera notiser</button>}</div>}
@@ -500,12 +573,14 @@ export default function App(){
       {role==='manager'&&tab==='overview'&&showAffeTease&&<section className="affe-tease"role="status"aria-live="polite"><span className="affe-tease-icon"aria-hidden="true">😏</span><div><div className="affe-tease-k">En snabb pik till Affe</div><p>Du har så bra koll på Stilles siffror att man nästan tror att du säljer själv 😄 Men undrar — vem säljer bäst? 😉</p></div><button type="button"className="affe-tease-close"aria-label="Stäng meddelandet"onClick={()=>setShowAffeTease(false)}>×</button><div className="affe-tease-progress"aria-hidden="true"><i/></div></section>}
       {err&&<div className="c errb"role="alert"><div className="err-title">Databasen kunde inte laddas</div><p className="err-detail">{err}</p><p className="s">{/fetch failed|kunde inte nå servern/i.test(err)?'Vercel kunde inte nå Supabase. Kontrollera Project URL i NEXT_PUBLIC_SUPABASE_URL, att projektet är aktivt och att URL och servernyckel kommer från samma projekt.':'Kontrollera hälsokontrollen och att servern använder en Secret key eller service_role-nyckel — inte anon/publishable.'}</p><div className="row"style={{marginBottom:0}}><button className="b pri"onClick={()=>load()}>Försök igen</button><button className="b"onClick={()=>window.open('/api/health','_blank','noopener,noreferrer')}>Öppna hälsokontroll</button></div></div>}
 
-      {tab==='overview'&&!can&&<ManagerOverview rows={rows}g={g}fetchedAt={fetchedAt}dayName={dayName}/>}
-      {tab==='overview'&&can&&<>
+      {tab==='overview'&&<>
         <h2>{can?`${greet}, Stille`:'Affes ledningsvy'} <span className="ok">{can?'👋':'◈'}</span></h2>
         <p className="sub">{can?<>{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></>:`Stilles resultat · ${dayName} · Skrivskyddad översikt`}</p>
-        <Motivation seller/>
-        <SellerExtras rows={rows}g={g}ts={ts}tt={tt}hasToday={!!todayRow}/>
+        <Motivation seller={can}/>
+        <Checklist can={can}/>
+        <Bars3D rows={rows}/>
+        {can&&<SellerExtras rows={rows}g={g}ts={ts}tt={tt}hasToday={!!todayRow}/>}
+        {!can&&<div className="mo-two"style={{marginBottom:16}}><StreakDots rows={rows}/><WeekdayInsight rows={rows}/></div>}
         {can&&<TodayFix sales={ts}tb={tt}has={!!todayRow}onSet={setToday}onClear={clearToday}/>}
         <Ticker items={[`Idag: ${todayRow?Number(todayRow.sales):0} sälj`,`Månaden: ${ms} sälj`,`TB månaden: ${sv(mt)} kr`,`${streak} dagar i rad 🔥`,can?'Fokus: dagens nästa steg':'Chefsvy · skrivskyddad uppföljning']}/>
         <CoachPanel role={can?'seller':'manager'} hasData={rows.length>0} needsStepUp={coachNeedsStep} todaySales={ts} dailyGoal={g.daily_sales} monthSales={ms} monthGoal={g.monthly_sales} ahead={ahead} remainingWorkdays={remainingWorkdays} requiredPerDay={requiredPerDay} recentAverage={recentCoachAverage} recentDays={recentCoachRows.length} aiText={can&&autoCoach?coachAi:''} aiBusy={can&&autoCoach&&coachBusy} aiConfigured={ks.configured} onAsk={()=>{setTab('ai');if(ks.configured)ask(can?coachPlanPrompt:`Jag är Affe, chef. Utifrån Stilles faktiska resultat hittills — ${ms} sälj den här månaden, ${ahead<0?`${f1(Math.abs(ahead))} efter`: `${f1(ahead)} före`} månadstakten och ${remainingWorkdays} arbetsdagar kvar — föreslå ett respektfullt sätt att stötta honom och en bra öppen fråga till vår nästa avstämning. Hitta inte på fakta.`)}}/>
@@ -649,6 +724,8 @@ export default function App(){
         </div>
         <div className="c"><div className="k">Dagliga sälj ({rg})</div><Chart a={A.slice(-21)}goal={g.daily_sales}/></div>
         <div className="c"style={{marginTop:16}}><div className="k">Snitt per veckodag</div><div className="ch">{wdAvg.map(x=><div key={x.n}><em>{x.v?f1(x.v):'–'}</em><b style={{height:(x.v/wmax)*115}}/>{x.n}</div>)}</div></div>
+        <MonthSummary rows={rows}g={g}/>
+        <Compare rows={rows}/>
       </>}
 
       {tab==='year'&&<>
@@ -700,7 +777,7 @@ export default function App(){
         {!ks.configured&&<div className="c"style={{maxWidth:600,marginBottom:14}}><div className="k">Aktivera AI</div><p className="s"style={{marginTop:6}}>Klistra in Anthropic-nyckeln (sparas bara på servern).</p>{can?<form onSubmit={e=>{e.preventDefault();keyCall('POST',keyIn)}}><input type="password"placeholder="sk-ant-…"value={keyIn}onChange={e=>setKeyIn(e.target.value)}autoComplete="off"/><button className="b pri"style={{marginTop:8}}>Spara</button></form>:<p className="s">Stille lägger in nyckeln.</p>}</div>}
         {ks.configured&&<div className="row"><span className="tag">✓ AI aktiv ({ks.source==='env'?'miljövariabel':'sparad nyckel'})</span>{can&&ks.source==='db'&&<button className="b ghost"onClick={()=>{if(confirm('Ta bort?'))keyCall('DELETE')}}>Ta bort nyckel</button>}</div>}
         {ks.configured&&<>
-          <div className="row">{(can?['Hur ligger jag till idag?','Föreslå veckans mål','Registrera idag: 5 sälj & 3000 kr','Veckosammanfattning','Peppa mig']:['Hur går det för Stille?','Veckosammanfattning','Peppa Stille']).map(x=><button key={x}className="b"disabled={busy}onClick={()=>ask(x)}>{x}</button>)}</div>
+          <div className="row">{(can?['Hur ligger jag till idag?','Föreslå veckans mål','Registrera idag: 5 sälj & 3000 kr','Veckosammanfattning','Peppa mig']:['Hur ska jag coacha Stille idag?','Vad ska jag ta upp med Stille?','Hur går det för Stille?','Veckosammanfattning','Skriv ett peppande meddelande till Stille']).map(x=><button key={x}className="b"disabled={busy}onClick={()=>ask(x)}>{x}</button>)}</div>
           <div className="chat">{msgs.map((m,i)=><div key={i}className={`msg ${m.r} ${m.e?'e':''}`}>{m.t}{m.props?.map(p=><div key={p.id}className="sug">{(p.tool==='registrera_dag'?`Registrera ${p.input.entry_date}: ${p.input.sales} sälj, ${fmtMoney(p.input.tb_sek)}${p.input.hours?', '+p.input.hours+' h':''}`:p.tool==='satt_mal'?'Ändra mål: '+Object.entries(p.input).map(([k,v])=>`${({a:'dagsmål sälj',b:'dagsmål TB',c:'månadsmål sälj',d:'månadsmål TB',e:'veckomål sälj',f:'veckomål TB'}as any)[k]||k} ${fmt(Number(v))}`).join(', '):p.tool==='skriv_kommentar'?`Skicka kommentar: "${p.input.body}"`:JSON.stringify(p.input))}<br/>{p.done?<span className="tag">✓ Gjort</span>:<button className="b pri"style={{marginTop:8}}onClick={()=>apply(p)}>Godkänn</button>}</div>)}</div>)}{busy&&<div className="msg a s">Tänker<span className="dots">…</span></div>}</div>
           <form onSubmit={e=>{e.preventDefault();if(q.trim()){ask(q.trim());setQ('')}}}style={{maxWidth:680,display:'grid',gridTemplateColumns:'1fr auto',gap:8}}><input value={q}maxLength={500}onChange={e=>setQ(e.target.value)}placeholder="Fråga eller be AI:n göra något…"/><button className="b pri"disabled={busy||!q.trim()}>Skicka</button></form>
         </>}
@@ -717,6 +794,7 @@ export default function App(){
         <div className="c"style={{maxWidth:580}}><div className="k">Om & genvägar</div><div className="s"style={{marginTop:8,lineHeight:1.9}}>Säljdashboard v7 · Next.js 15 · Supabase · HMAC-sessioner · Rollanpassad chefsöversikt, daglig AI-coach, måltempo, historik och statistik.<br/><b>⌘/Ctrl + K</b> – kommandopalett<br/><b>Rätta dagens siffror</b> i rutan på översikten för snabb ökning.</div><div className="row"style={{marginTop:10,marginBottom:0}}><button className="b ghost"onClick={()=>window.open('/api/health','_blank')}>Hälsokontroll</button><button className="b danger"onClick={doLogout}>Logga ut</button></div></div>
       </>}
 
+      <NetStatus/><ScrollPill/>
       <button className="b logout-fix"onClick={doLogout}aria-label="Logga ut">⎋ Logga ut</button>
       {toast&&<div className="toast"role="status">{toast}</div>}
       {cmd&&<div className="cmd-pal"onClick={()=>setCmd(false)}><div className="cmd-card"onClick={e=>e.stopPropagation()}><input autoFocus className="cmd-input"placeholder="Gå någonstans eller gör en åtgärd…"value={cmdQ}onChange={e=>{setCmdQ(e.target.value);setCmdI(0)}}onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setCmdI(i=>Math.min(i+1,cmds.length-1))}else if(e.key==='ArrowUp'){e.preventDefault();setCmdI(i=>Math.max(i-1,0))}else if(e.key==='Enter'){e.preventDefault();if(cmds[cmdI])cmdAction(cmds[cmdI].fn)}}}/><div className="cmd-list">{cmds.map((c,i)=><div key={c.label}className={'cmd-item '+(i===cmdI?'on':'')}onMouseEnter={()=>setCmdI(i)}onClick={()=>cmdAction(c.fn)}><span>{c.icon}</span><span>{c.label}</span>{!c.k&&<span className="cmd-kbd">↵</span>}</div>)}
