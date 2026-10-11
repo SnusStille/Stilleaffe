@@ -1,0 +1,118 @@
+/* Deep Carbon feature polish: real-data 3D chart, quiet motion, accessible controls. */
+
+/* A calmer, compact motivation card; copy changes only on user request. */
+.motiv {
+  position: relative;
+  margin: 8px 0 14px;
+  padding: 17px 19px;
+  overflow: hidden;
+  border: 1px solid var(--bd);
+  border-radius: 14px;
+  background: #101419;
+  box-shadow: var(--shadow-lg);
+}
+.motiv::before,
+.motiv::after { display: none !important; }
+.motiv-k { color: var(--mu); font-size: 10px; font-weight: 750; letter-spacing: .12em; }
+.motiv-q {
+  max-width: 72ch;
+  margin: 7px 0 3px;
+  color: var(--tx);
+  font-size: clamp(19px, 2.4vw, 27px);
+  font-weight: 730;
+  letter-spacing: -.025em;
+  line-height: 1.25;
+  animation: none !important;
+}
+.motiv-s { color: var(--mu2); font-size: 13px; animation: none !important; }
+.motiv-next {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-width: 38px;
+  min-height: 38px;
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  background: #151a20;
+  color: var(--mu2);
+  cursor: pointer;
+}
+.motiv-next:hover { color: var(--tx); border-color: var(--bd2); }
+
+/* Keep the 3D treatment attached to a real seven-day sales series. */
+.b3 { border-color: color-mix(in srgb, var(--gr) 22%, var(--bd)); }
+.b3-stage { height: 252px; padding-bottom: 29px; perspective: 1000px; }
+.b3-scene { transform: rotateX(-17deg) rotateY(-21deg); transition: transform .28s ease-out; }
+.b3-bar .front {
+  color: #08120f;
+  background: linear-gradient(180deg, var(--acc1), var(--gr2));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+}
+.b3-bar .side { background: linear-gradient(180deg, color-mix(in srgb, var(--gr2) 72%, #000), #101419); }
+.b3-bar .top { background: color-mix(in srgb, var(--acc1) 64%, #161b20); }
+.b3-bar.today .front { color: #0d1116; background: linear-gradient(180deg, var(--am), color-mix(in srgb, var(--am) 62%, #252015)); }
+.b3-bar.today .side { background: linear-gradient(180deg, color-mix(in srgb, var(--am) 60%, #101419), #101419); }
+.b3-bar.today .top { background: color-mix(in srgb, var(--am) 58%, #fff); }
+.b3-bar.zero .front,
+.b3-bar.zero .side,
+.b3-bar.zero .top { background: #232a31; color: var(--mu2); }
+.b3-bar.zero .front { box-shadow: none; }
+.b3-bar.missing .front {
+  border: 1px dashed var(--bd2);
+  background: #0c1014;
+  color: var(--mu);
+  box-shadow: none;
+}
+.b3-bar.missing .side,
+.b3-bar.missing .top { background: #11161b; opacity: .55; }
+.b3-floor {
+  border-color: color-mix(in srgb, var(--gr) 18%, var(--bd));
+  background:
+    linear-gradient(color-mix(in srgb, var(--gr) 10%, transparent) 1px, transparent 1px) 0 0/36px 36px,
+    linear-gradient(90deg, color-mix(in srgb, var(--gr) 10%, transparent) 1px, transparent 1px) 0 0/36px 36px,
+    #0d1115;
+}
+@media (max-width: 560px) {
+  .b3-stage { height: 224px; }
+  .motiv { padding: 15px; padding-right: 58px; }
+  .motiv-next { top: 9px; right: 9px; }
+}
+
+/* The ticker is a readable snapshot, not an endlessly scrolling marquee. */
+.ticker { overflow: visible; border-color: var(--bd); background: #0c1014; }
+.tk-track {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 7px 12px;
+  padding: 9px 12px;
+  animation: none !important;
+  transform: none !important;
+}
+.tk-i { color: var(--mu2); white-space: normal; }
+.tk-i em { color: var(--gr); font-style: normal; }
+
+/* Shared visually-hidden text for chart values and non-visual descriptions. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.focus-btn { border-color: var(--bd2); background: #0d1116; color: var(--mu2); }
+.focus-btn.on { color: var(--tx); border-color: color-mix(in srgb, var(--gr) 52%, var(--bd)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gr) 18%, transparent); }
+.fresh { min-height: 32px; color: var(--mu2); background: #11161b; border-color: var(--bd); }
+.netoff { background: #241e10; color: #f4e6c2; border-color: #806a34; box-shadow: 0 8px 28px rgba(0,0,0,.32); }
+.scrollpill { background: #10151a; color: var(--tx); }
+
+@media (prefers-reduced-motion: reduce) {
+  html, body { scroll-behavior: auto !important; }
+  .motiv-q, .motiv-s, .b3-bar, .b3-scene, .tk-track, .fresh .spin { animation: none !important; transition: none !important; }
+}

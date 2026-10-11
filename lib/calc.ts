@@ -137,17 +137,26 @@ export function bestStreak(rows: Row[], g: Goals): number {
 export function pbDay(rows: Row[]): Row | null { return rows.reduce<Row | null>((b, r) => (!b || r.sales > b.sales ? r : b), null); }
 export function pbTB(rows: Row[]): Row | null { return rows.reduce<Row | null>((b, r) => (!b || r.tb_sek > b.tb_sek ? r : b), null); }
 export function compareMonths(rows: Row[]) {
-  const now = new Date();
-  const curKey = mon(today());
-  const prevKey = mon(iso(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
-  const curRows = rows.filter(r => mon(r.entry_date) === curKey);
-  const prevRows = rows.filter(r => mon(r.entry_date) === prevKey);
-  if (!curRows.length && !prevRows.length) return null;
+  const [yearNum, monthNum, dayNum] = today().split('-').map(Number);
+  const curKey = `${yearNum}-${String(monthNum).padStart(2, '0')}`;
+  const previousMonth = new Date(yearNum, monthNum - 2, 1);
+  const prevKey = mon(iso(previousMonth));
+  const previousMonthLastDay = new Date(yearNum, monthNum - 1, 0).getDate();
+  const prevThrough = iso(new Date(yearNum, monthNum - 2, Math.min(dayNum, previousMonthLastDay)));
+  const curRows = rows.filter(r => mon(r.entry_date) === curKey && r.entry_date <= today());
+  const prevRows = rows.filter(r => mon(r.entry_date) === prevKey && r.entry_date <= prevThrough);
+  // Don't manufacture a zero month when either period has not been registered.
+  if (!curRows.length || !prevRows.length) return null;
   const cur = { label: curKey, sales: sum(curRows, 'sales'), tb: sum(curRows, 'tb_sek'), days: curRows.length };
   const prev = { label: prevKey, sales: sum(prevRows, 'sales'), tb: sum(prevRows, 'tb_sek'), days: prevRows.length };
-  return { cur, prev, salesDiff: cur.sales - prev.sales, tbDiff: cur.tb - prev.tb,
-    salesPct: prev.sales ? Math.round((cur.sales - prev.sales) / prev.sales * 100) : 0,
-    tbPct: prev.tb ? Math.round((cur.tb - prev.tb) / prev.tb * 100) : 0 };
+  return {
+    cur,
+    prev,
+    salesDiff: cur.sales - prev.sales,
+    tbDiff: cur.tb - prev.tb,
+    salesPct: prev.sales ? Math.round((cur.sales - prev.sales) / prev.sales * 100) : null,
+    tbPct: prev.tb ? Math.round((cur.tb - prev.tb) / prev.tb * 100) : null,
+  };
 }
 export const MOOD_EMOJI: Record<string, string> = { fire: '🔥', great: '😄', ok: '🙂', tired: '😴', bad: '😩' };
 export const MOOD_LABEL: Record<string, string> = { fire: 'På topp', great: 'Bra', ok: 'Okej', tired: 'Trött', bad: 'Dålig' };

@@ -36,7 +36,7 @@ function eventText(a:Activity):string{
 }
 function confetti(big=false){if(typeof document==='undefined')return;const w=document.createElement('div');w.className='confetti';if(big)w.classList.add('mega');const n=big?180:110;for(let i=0;i<n;i++){const e=document.createElement('i');const hue=Math.random()*360;const size=big?6+Math.random()*6:4+Math.random()*6;e.style.cssText=`left:${Math.random()*100}%;width:${size}px;height:${size*1.5}px;background:hsl(${hue},85%,60%);animation-delay:${Math.random()*.5}s;--x:${(Math.random()-.5)*400}px;--r:${Math.random()*1080-540}deg;border-radius:${Math.random()>.5?'2px':'50%'}`;w.appendChild(e)}document.body.appendChild(w);setTimeout(()=>w.remove(),big?4200:2700)}
 function Sparkles(){const sparks=useMemo(()=>Array.from({length:20},(_,i)=>({i,l:3+((i*17)%31)/10,t:((i*13)%37)/10,d:`${(i*47+11)%100}%`,b:`${(i*29+7)%100}%`,s:1+(i%3)})),[]);return<div className="sparkles">{sparks.map(s=><i key={s.i}style={{left:s.d,top:s.b,width:s.s+'px',height:s.s+'px',animationDelay:s.t+'s',animationDuration:s.l+'s'}}/>)}</div>}
-function CountUp({n,dur=900,decimals=0}:{n:number;dur?:number;decimals?:number}){const[v,setV]=useState(0);useEffect(()=>{let raf=0;const t0=performance.now();const step=(t:number)=>{const p=Math.min((t-t0)/dur,1);const eased=1-Math.pow(1-p,3);setV(n*eased);if(p<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);return()=>cancelAnimationFrame(raf)},[n,dur]);return<>{decimals?Math.round(v*Math.pow(10,decimals))/Math.pow(10,decimals):Math.round(v)}</>}
+function CountUp({n,dur=900,decimals=0}:{n:number;dur?:number;decimals?:number}){const[v,setV]=useState(0);useEffect(()=>{if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){setV(n);return}let raf=0;const t0=performance.now();const step=(t:number)=>{const p=Math.min((t-t0)/dur,1);const eased=1-Math.pow(1-p,3);setV(n*eased);if(p<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);return()=>cancelAnimationFrame(raf)},[n,dur]);return<>{decimals?Math.round(v*Math.pow(10,decimals))/Math.pow(10,decimals):Math.round(v)}</>}
 function Ring({p,sub,size=170,stroke=14,delay=0}:{p:number;sub?:string;size?:number;stroke?:number;delay?:number}){const r=(size-20)/2,C=2*Math.PI*r;const[lp,setLp]=useState(0);useEffect(()=>{const id=setTimeout(()=>setLp(Math.max(0,Math.min(100,p))),60+delay);return()=>clearTimeout(id)},[p,delay]);return<div className="ring"style={{width:size,height:size}}><svg viewBox={`0 0 ${size} ${size}`}><defs><linearGradient id={`rg${size}${delay}`}x1="0"x2="1"><stop offset="0"stopColor="var(--acc1)"/><stop offset="1"stopColor="var(--g2)"/></linearGradient></defs><circle cx={size/2}cy={size/2}r={r}fill="none"stroke="rgba(255,255,255,.08)"strokeWidth={stroke}/><circle cx={size/2}cy={size/2}r={r}fill="none"stroke={`url(#rg${size}${delay})`}strokeWidth={stroke}strokeLinecap="round"strokeDasharray={C}strokeDashoffset={C*(1-lp/100)}style={{transition:'stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)'}}/></svg><div className="t"style={{fontSize:size<140?'x-small':'medium'}}><b>{Math.round(lp)}%</b>{sub&&<span>{sub}</span>}</div></div>}
 function Stat({k,v,s,c,bar,icon,i,trend}:{k:string;v:any;s?:string;c?:string;bar?:number;icon?:string;i?:number;trend?:number}){return<div className="c"style={{'--i':i}as any}>{icon&&<div className="kpi-icon">{icon}</div>}<div className="k">{k}</div><div className={'v num '+(c||'')}>{v}{typeof trend==='number'&&trend!==0&&<span className={'trend-'+(trend>0?'up':'down')}title="Jämfört med motsvarande veckodagar föregående vecka">{trend>0?'▲':'▼'}{Math.abs(trend)}%</span>}</div><div className="s">{s}</div>{bar!=null&&<div className="bar"><i style={{width:Math.max(0,Math.min(100,bar))+'%'}}/></div>}</div>}
 function Heat({rows,goal}:{rows:Row[];goal:number}){const n=new Date(),y=n.getFullYear(),m=n.getMonth(),last=new Date(y,m+1,0).getDate(),first=(new Date(y,m,1).getDay()+6)%7;const by=new Map(rows.map(r=>[r.entry_date,r.sales]));const cells:(number|null)[]=[...Array(first).fill(null),...Array.from({length:last},(_,i)=>i+1)];return<div className="heat">{['M','T','O','T','F','L','S'].map(d=><span key={d}className="hd">{d}</span>)}{cells.map((d,i)=>{if(!d)return<span key={i}/>;const k=iso(new Date(y,m,d));const v=by.get(k);const isToday=k===today();return<span key={i}className={'hc'+(isToday?' today':'')}title={v==null?k+' – ej registrerad':`${k}: ${v} sälj, ${fmtMoney(rows.find(r=>r.entry_date===k)!.tb_sek)}`}style={v!=null?{background:`rgba(52,224,138,${.2+Math.min(v/Math.max(goal,1),1.2)*.6})`,color:'#04170c',fontWeight:700}:undefined}>{d}</span>})}</div>}
@@ -78,34 +78,40 @@ function TodayFix({sales,tb,has,onSet,onClear}:{sales:number;tb:number;has:boole
     <p className="s">Står det fel? Ändra antalet och tryck Spara. Äldre dagar rättar eller tar du bort under Historik.</p></div>
 }
 
-function Ticker({items}:{items:string[]}){const row=items.map((t,i)=><span key={i}className="tk-i">{t}<em>◆</em></span>);return<div className="ticker"aria-hidden="true"><div className="tk-track">{row}{row}{row}{row}</div></div>}
+function Ticker({items}:{items:string[]}){return<div className="ticker"role="group"aria-label="Snabbsammanfattning"><div className="tk-track">{items.map((t,i)=><span key={i}className="tk-i">{t}</span>)}</div></div>}
 const pad2=(n:number)=>String(n).padStart(2,'0');
 const isoD=(d:Date)=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+const isSalesWeekday=(date:string)=>{const day=new Date(date+'T12:00:00').getDay();return day>=1&&day<=5};
 const sv=(n:number)=>Math.round(n).toLocaleString('sv-SE');
 function ManagerReport({rows,goal}:{rows:Row[];goal:Goals}){
-  const now=new Date(),dow=(now.getDay()+6)%7;
-  const mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow),pm=new Date(mon);
-  pm.setDate(mon.getDate()-7);
-  const a=isoD(mon),b=isoD(pm),todayEnd=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1),prevEnd=new Date(pm.getFullYear(),pm.getMonth(),pm.getDate()+dow+1);
-  const cur=rows.filter(r=>r.entry_date>=a&&r.entry_date<isoD(todayEnd)),prev=rows.filter(r=>r.entry_date>=b&&r.entry_date<isoD(prevEnd));
+  const [stockholmYear,stockholmMonth,stockholmDay]=today().split('-').map(Number),now=new Date(stockholmYear,stockholmMonth-1,stockholmDay),dow=(now.getDay()+6)%7;
+  const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow),previousMonday=new Date(monday);
+  previousMonday.setDate(monday.getDate()-7);
+  const currentStart=isoD(monday),previousStart=isoD(previousMonday),todayEnd=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  const previousEnd=new Date(previousMonday);previousEnd.setDate(previousMonday.getDate()+dow+1);
+  const cur=rows.filter(r=>r.entry_date>=currentStart&&r.entry_date<isoD(todayEnd));
+  const prev=rows.filter(r=>r.entry_date>=previousStart&&r.entry_date<isoD(previousEnd));
   const S=(x:Row[])=>x.reduce((t,r)=>t+Number(r.sales||0),0),T=(x:Row[])=>x.reduce((t,r)=>t+Number(r.tb_sek||0),0);
-  const cs=S(cur),ps=S(prev),diff=ps>0?Math.round((cs-ps)/ps*100):null,weekProgress=Math.min(100,pct(cs,goal.weekly_sales));
+  const prevByDate=new Map(prev.map(r=>[r.entry_date,r]));
+  const matched=cur.filter(r=>isSalesWeekday(r.entry_date)).flatMap(r=>{const d=new Date(r.entry_date+'T12:00:00');d.setDate(d.getDate()-7);const prior=prevByDate.get(isoD(d));return prior?[[r,prior] as const]:[]});
+  const comparableCurrent=matched.reduce((t,[r])=>t+Number(r.sales||0),0),comparablePrevious=matched.reduce((t,[,r])=>t+Number(r.sales||0),0);
+  const cs=S(cur),diff=matched.length&&comparablePrevious>0?Math.round((comparableCurrent-comparablePrevious)/comparablePrevious*100):null,weekProgress=Math.min(100,pct(cs,goal.weekly_sales));
   const from14=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-13));
-  const l14=rows.filter(r=>r.entry_date>=from14),days=new Set(l14.map(r=>r.entry_date)).size,avg=days?S(l14)/days:0;
+  const l14=rows.filter(r=>r.entry_date>=from14&&r.entry_date<=isoD(now)),days=new Set(l14.map(r=>r.entry_date)).size,avg=days?S(l14)/days:0;
   const best=[...rows].sort((x,y)=>Number(y.sales)-Number(x.sales))[0];
-  const verdict=diff===null?'Ingen jämförelse än – förra veckan saknar siffror.':diff>=10?'Starkare vecka än förra. Håll i det.':diff<=-10?'Svagare vecka än förra – värt en uppföljning.':'Stabilt tempo jämfört med förra veckan.';
+  const verdict=!matched.length?'Inga gemensamma registrerade veckodagar att jämföra ännu.':comparablePrevious===0?'Förra veckans matchande dagar saknar sälj för procentjämförelse.':diff!==null&&diff>=10?'Starkare tempo på jämförbara dagar.':diff!==null&&diff<=-10?'Lägre tempo på jämförbara dagar – värt en uppföljning.':'Stabilt tempo på jämförbara dagar.';
   const tone=diff===null?'':diff>=0?'up':'down';
-  return<div className="mr"><div className="c mr-hero"><div className="k">Chefsrapport · denna vecka</div><div className="mr-big num">{cs} <small>sälj</small>{diff!==null&&<span className={'stat-change '+tone}>{diff>=0?'▲':'▼'} {Math.abs(diff)}%</span>}</div><p className="s">{verdict}</p><div className="manager-target"><div><span>Veckomål</span><b>{fmt(cs)} / {fmt(goal.weekly_sales)} sälj</b><strong>{weekProgress}%</strong></div><div className="bar"><i style={{width:weekProgress+'%'}}/></div></div></div>
-    <div className="c"><div className="k">TB denna vecka</div><div className="mr-mid num">{sv(T(cur))} kr</div><div className="s">Förra veckan: {sv(T(prev))} kr</div></div>
-    <div className="c"><div className="k">Snitt / arbetsdag (14 d)</div><div className="mr-mid num">{avg.toFixed(1)} sälj</div><div className="s">{days} dagar med registrering</div></div>
+  return<div className="mr"><div className="c mr-hero"><div className="k">Chefsrapport · denna vecka</div><div className="mr-big num">{cur.length?fmt(cs):'–'} <small>sälj</small>{diff!==null&&<span className={'stat-change '+tone}>{diff>=0?'▲':'▼'} {Math.abs(diff)}%</span>}</div><p className="s">{verdict} · {cur.length} registrerade dagar denna vecka{matched.length?` · ${matched.length} gemensamma registrerade vardagar`:''}</p><div className="manager-target"><div><span>Veckomål</span><b>{cur.length?`${fmt(cs)} / ${fmt(goal.weekly_sales)} sälj`:'Ingen registrering hittills'}</b><strong>{cur.length?`${weekProgress}%`:'–'}</strong></div><div className="bar"><i style={{width:(cur.length?weekProgress:0)+'%'}}/></div></div></div>
+    <div className="c"><div className="k">TB registrerat denna vecka</div><div className="mr-mid num">{cur.length?`${sv(T(cur))} kr`:'–'}</div><div className="s">Förra veckan: {prev.length?`${sv(T(prev))} kr`:'inga registreringar'}</div></div>
+    <div className="c"><div className="k">Snitt / registrerad dag · 14 d</div><div className="mr-mid num">{days?avg.toFixed(1):'–'}{days?' sälj':''}</div><div className="s">{days} dagar med registrering</div></div>
     <div className="c"><div className="k">Starkaste dag i historiken</div><div className="mr-mid num">{best?Number(best.sales)+' sälj':'–'}</div><div className="s">{best?best.entry_date:'Inga registreringar än'}</div></div></div>
 }
 function CoachPanel({
-  role, hasData, needsStepUp, todaySales, dailyGoal, monthSales, monthGoal,
+  role, hasData, hasToday, hasMonthData, paceReliable, registeredWorkdays, elapsedWorkdays, needsStepUp, todaySales, dailyGoal, monthSales, monthGoal,
   ahead, remainingWorkdays, requiredPerDay, recentAverage, recentDays,
   aiText, aiBusy, aiConfigured, onAsk,
 }: {
-  role: 'seller' | 'manager'; hasData: boolean; needsStepUp: boolean;
+  role: 'seller' | 'manager'; hasData: boolean; hasToday: boolean; hasMonthData: boolean; paceReliable: boolean; registeredWorkdays: number; elapsedWorkdays: number; needsStepUp: boolean;
   todaySales: number; dailyGoal: number; monthSales: number; monthGoal: number;
   ahead: number; remainingWorkdays: number; requiredPerDay: number;
   recentAverage: number; recentDays: number; aiText: string; aiBusy: boolean;
@@ -114,6 +120,8 @@ function CoachPanel({
   const seller = role === 'seller';
   const title = seller
     ? (!hasData ? 'Börja med dagens första registrering'
+      : !hasToday ? 'Dagens siffror saknas'
+      : !paceReliable ? 'Komplettera registreringarna'
       : needsStepUp ? 'Dags att steppa upp'
       : ahead > 2 ? 'Du ligger före planen'
       : 'Du är i fas — håll trycket')
@@ -121,17 +129,27 @@ function CoachPanel({
   const pace = ahead < 0
     ? `${f1(Math.abs(ahead))} sälj efter månadstakten`
     : `${f1(ahead)} sälj före månadstakten`;
+  const coverageNote=`Underlag: ${registeredWorkdays} av ${elapsedWorkdays} passerade vardagar registrerade.`;
   const sellerCopy = !hasData
     ? 'När dagens siffror är registrerade kan coachen jämföra din takt med målet och ge konkreta råd.'
-    : needsStepUp
-      ? remainingWorkdays>0 ? `Du ligger ${pace}. Med ${remainingWorkdays} arbetsdagar kvar behöver du cirka ${f1(requiredPerDay)} sälj per arbetsdag för att nå månadsmålet.` : `Du ligger ${pace}. Månadens arbetsdagar är slut och ${fmt(Math.max(monthGoal-monthSales,0))} sälj saknas till målet.`
-      : ahead > 2
-        ? `Du ligger ${pace}. Behåll rutinen — målet är ${fmt(monthGoal)} sälj den här månaden.`
-        : `Tempot ligger nära planen. Dagens mål är ${dailyGoal} sälj; du har registrerat ${todaySales} hittills.`;
+    : !hasToday
+      ? `Dagens resultat är inte registrerat, så dagsmålet bedöms inte som noll. ${hasMonthData?'Månadstakten utgår bara från registrerade dagar.':'Det finns ännu inga registreringar denna månad.'} Lägg in dagens siffror för en rättvis dagsbild.`
+      : !paceReliable
+        ? `Månadstakten kan inte bedömas säkert än: ${registeredWorkdays} av ${elapsedWorkdays} arbetsdagar har en registrering. Komplettera saknade dagar innan du drar slutsatser.`
+      : needsStepUp
+        ? remainingWorkdays>0 ? `Du ligger ${pace}. ${coverageNote} Med ${remainingWorkdays} arbetsdagar kvar behöver du cirka ${f1(requiredPerDay)} sälj per arbetsdag för att nå månadsmålet.` : `Du ligger ${pace}. ${coverageNote} Månadens arbetsdagar är slut och ${fmt(Math.max(monthGoal-monthSales,0))} registrerade sälj saknas till målet.`
+        : ahead > 2
+          ? `Du ligger ${pace}. ${coverageNote} Behåll rutinen — målet är ${fmt(monthGoal)} sälj den här månaden.`
+          : `Tempot ligger nära planen. ${coverageNote} Dagens mål är ${dailyGoal} sälj; du har registrerat ${todaySales} hittills.`;
+  const managerPaceCopy = !hasMonthData
+    ? 'Månadstakten kan inte bedömas eftersom månaden saknar registreringar.'
+    : !paceReliable
+      ? `Månadstakten kan inte bedömas säkert än: ${registeredWorkdays} av ${elapsedWorkdays} arbetsdagar har en registrering.`
+      : `Stille ligger ${pace}. ${registeredWorkdays} av ${elapsedWorkdays} passerade vardagar har en registrering. ${remainingWorkdays>0?`${remainingWorkdays} arbetsdagar återstår; den nödvändiga takten är cirka ${f1(requiredPerDay)} sälj per arbetsdag.`:`Månadens arbetsdagar är slut; ${fmt(Math.max(monthGoal-monthSales,0))} registrerade sälj saknas till målet.`}`;
   const managerCopy = !hasData
     ? 'Ingen säljdata finns ännu. När Stille registrerar resultat visas takt, trend och konkreta uppföljningspunkter här.'
-    : `Stille ligger ${pace}. ${remainingWorkdays>0?`${remainingWorkdays} arbetsdagar återstår; den nödvändiga takten är cirka ${f1(requiredPerDay)} sälj per arbetsdag.`:`Månadens arbetsdagar är slut; ${fmt(Math.max(monthGoal-monthSales,0))} sälj saknas till målet.`} ${recentDays >= 3 ? `Snittet senaste ${recentDays} registrerade dagar är ${f1(recentAverage)} sälj.` : 'Datat är ännu för tunt för en säker trendbedömning.'}`;
-  return <section className={`c coach-panel ${needsStepUp && seller ? 'needs-push' : 'on-track'} ${seller ? 'seller-coach' : 'manager-coach'}`} aria-live="polite">
+    : `${hasToday?'Dagens resultat är registrerat.':'Dagens registrering saknas, så dagens sälj bedöms inte som noll.'} ${managerPaceCopy} ${recentDays >= 3 ? `Snittet senaste ${recentDays} registrerade dagar är ${f1(recentAverage)} sälj.` : 'Datat är ännu för tunt för en säker trendbedömning.'}`;
+  return <section className={`c coach-panel ${needsStepUp && seller && hasToday ? 'needs-push' : 'on-track'} ${seller ? 'seller-coach' : 'manager-coach'}`}>
     <div className="coach-main">
       <div className="coach-heading">
         <span className="coach-spark" aria-hidden="true">✦</span>
@@ -140,7 +158,7 @@ function CoachPanel({
       <p className="coach-copy">{seller ? sellerCopy : managerCopy}</p>
       {recentDays > 0 && <p className="coach-context">Senaste {recentDays} registrerade dagar: <b>{f1(recentAverage)} sälj i snitt</b></p>}
       {aiText && <div className="coach-ai"><span>✦ AI-COACH · IDAG</span><p>{aiText}</p></div>}
-      {aiBusy && <div className="coach-ai coach-loading"><span className="coach-dot"/> AI:n läser dagens tempo och gör en konkret plan…</div>}
+      {aiBusy && <div className="coach-ai coach-loading"role="status"><span className="coach-dot"/> AI:n läser registreringarna och gör en konkret plan…</div>}
       <div className="coach-actions">
         <button className="b pri" type="button" onClick={onAsk} disabled={aiBusy}>
           {aiBusy ? 'Gör din plan…' : seller ? '✦ Be AI göra min plan' : '✦ Fråga AI hur jag kan stötta'}
@@ -149,9 +167,9 @@ function CoachPanel({
       </div>
     </div>
     <div className="coach-metrics" aria-label="Måluppföljning">
-      <div><span>Dagens mål</span><b>{todaySales}<small> / {dailyGoal}</small></b></div>
-      <div><span>Månad</span><b>{fmt(monthSales)}<small> / {fmt(monthGoal)}</small></b></div>
-      <div><span>{remainingWorkdays>0?'Behövs / arbetsdag':'Sälj kvar till mål'}</span><b>{remainingWorkdays>0?f1(requiredPerDay):fmt(Math.max(monthGoal-monthSales,0))}</b></div>
+      <div><span>Dagens mål</span><b>{hasToday?todaySales:'–'}<small> / {dailyGoal}</small></b></div>
+      <div><span>Månad</span><b>{hasMonthData?fmt(monthSales):'–'}<small> / {fmt(monthGoal)}</small></b></div>
+      <div><span>{paceReliable?(remainingWorkdays>0?'Behövs / arbetsdag':'Sälj kvar till mål'):'Registrerade vardagar'}</span><b>{paceReliable?(remainingWorkdays>0?f1(requiredPerDay):fmt(Math.max(monthGoal-monthSales,0))):`${registeredWorkdays}/${elapsedWorkdays}`}</b></div>
     </div>
   </section>;
 }
@@ -171,71 +189,34 @@ function MonthCal({rows}:{rows:Row[]}){
 }
 
 const QUOTES:{t:string;s:string}[]=[
- {t:'Discipline beats motivation.',s:'Motivation kommer och går. Rutinen stannar.'},
- {t:'One call closer.',s:'Varje samtal flyttar dig närmare nästa ja.'},
- {t:'Consistency creates results.',s:'Det är de tråkiga dagarna som bygger rekorden.'},
- {t:'Beat yesterday.',s:'Inte alla andra. Bara gårdagens version av dig.'},
- {t:'Your next level starts now.',s:'Inte på måndag. Inte efter lunch. Nu.'},
- {t:'Small wins. Big results.',s:'Ett säljsamtal i taget blir en månad att vara stolt över.'},
- {t:'Stay focused. Keep building.',s:'Fokus är en superkraft – skydda den.'},
- {t:'Every call is an opportunity.',s:'Du vet aldrig vilket samtal som vänder dagen.'},
- {t:'Nej är bara en omväg.',s:'Nästa samtal startar på noll igen – utnyttja det.'},
- {t:'Calm voice. Sharp ears.',s:'Lyssna mer än du pratar, så säljer kunden åt dig.'},
- {t:'Process över panik.',s:'Följ ditt upplägg även när siffrorna släpar.'},
- {t:'Own the day.',s:'Du bestämmer tempot de första tio minuterna.'},
- {t:'Det svåra samtalet först.',s:'Börja med det du helst skjuter upp.'},
- {t:'Momentum is built, not found.',s:'Ett sälj till – så rullar det.'},
- {t:'Build the streak.',s:'Varje arbetsdag du dyker upp räknas.'},
- {t:'Tänk i veckor, inte i samtal.',s:'En seg timme bestämmer inte din vecka.'},
- {t:'Earn it. Again.',s:'Förtroende säljer. Bygg det i varje samtal.'},
- {t:'Pressure makes diamonds.',s:'Tuffa dagar är träning, inte bevis på något annat.'},
- {t:'Be the reason they say yes.',s:'Tydlighet, lugn och ett enkelt nästa steg.'},
- {t:'Progress, not perfection.',s:'Ett bättre samtal än det förra räcker långt.'},
- {t:'Show up. Dial. Repeat.',s:'Enkelt att förstå. Svårt att göra. Därför lönar det sig.'},
- {t:'Kvalitet i varje samtal.',s:'Ett bra samtal slår tre stressade.'},
- {t:'Compound the effort.',s:'Små förbättringar varje dag blir stora över en månad.'},
- {t:'Hunger with humility.',s:'Ambitiös men lyhörd – kombinationen vinner.'},
- {t:'Energin smittar.',s:'Le innan du ringer. Rösten hör det.'},
- {t:'Your only rival is your last record.',s:'Slå rekordet – eller förbered nästa.'},
- {t:'Finish strong.',s:'De sista tjugo minuterna är ofta de mest lönsamma.'},
- {t:'Trust the reps.',s:'Du blir bättre för varje samtal, även när det inte känns så.'},
+ {t:'Fokusera på nästa bra samtal.',s:'Ett tydligt nästa steg räcker.'},
+ {t:'Små steg bygger stabilt tempo.',s:'Jämför med din egen plan, inte med antaganden.'},
+ {t:'Lyssna klart innan du svarar.',s:'Nyfikenhet gör samtalet bättre.'},
+ {t:'Håll planen enkel.',s:'Välj en sak att göra härnäst.'},
+ {t:'Ett nej avgör inte dagen.',s:'Ta med lärdomen och börja om i nästa samtal.'},
+ {t:'Rytm före stress.',s:'En lugn och tydlig process ger bättre underlag.'},
+ {t:'Skriv ner det du lärde dig.',s:'En kort anteckning gör nästa pass lättare.'},
+ {t:'Ta en sak i taget.',s:'Fokus är också att välja bort.'},
+ {t:'Bra uppföljning börjar med att lyssna.',s:'Fråga hellre än att anta.'},
+ {t:'Stabilitet slår ryckighet.',s:'Låt registreringen visa vad som faktiskt hände.'},
+ {t:'Sätt ett konkret mål för nästa timme.',s:'Gör det litet nog att börja nu.'},
+ {t:'Ge feedback på beteende, inte person.',s:'Respekt och tydlighet går hand i hand.'},
 ];
 function Motivation({seller}:{seller?:boolean}){
-  const[i,setI]=useState(()=>Math.floor(Math.random()*QUOTES.length));const[n,setN]=useState(0);
-  useEffect(()=>{const id=window.setInterval(()=>{setI(v=>(v+1+Math.floor(Math.random()*4))%QUOTES.length);setN(v=>v+1)},24000);return()=>window.clearInterval(id)},[]);
-  const q=QUOTES[i];
-  return<section className="motiv"aria-live="off"><div className="m3d"aria-hidden="true"><i/><i/><i/><b/></div><div className="motiv-k">{seller?'DAGENS DRIV':'STILLES DRIV'}</div><p key={n}className="motiv-q">{q.t}</p><div key={'s'+n}className="motiv-s">{q.s}</div></section>
+  const[i,setI]=useState(0);
+  useEffect(()=>{
+    const day=today();
+    const dayNumber=Math.floor(Date.parse(day+'T12:00:00Z')/86400000);
+    setI(Math.abs(dayNumber)%QUOTES.length);
+  },[]);
+  const q=QUOTES[(i+(seller?0:3))%QUOTES.length];
+  return<section className="motiv"aria-label={seller?'Dagens fokus':'Coachens fokus'}aria-live="off">
+    <div className="motiv-k">{seller?'DAGENS DRIV':'COACHENS FOKUS'}</div>
+    <p className="motiv-q"key={'q'+i}>{q.t}</p>
+    <div className="motiv-s"key={'s'+i}>{q.s}</div>
+    <button type="button"className="motiv-next"aria-label="Visa nästa fokus"title="Visa nästa fokus"onClick={()=>setI(v=>(v+1)%QUOTES.length)}>↻</button>
+  </section>;
 }
-function ManagerOverview({rows,g,fetchedAt,dayName}:{rows:Row[];g:Goals;fetchedAt:number;dayName:string}){
-  const[span,setSpan]=useState(30);
-  const now=new Date(),td=isoD(now),today=rows.find(r=>r.entry_date===td);
-  const ts=Number(today?.sales||0),tt=Number(today?.tb_sek||0),dg=Number(g.daily_sales||0),mg=Number((g as any).monthly_sales||0);
-  const mo=rows.filter(r=>r.entry_date.startsWith(td.slice(0,7))),ms=mo.reduce((t,r)=>t+Number(r.sales||0),0),mt=mo.reduce((t,r)=>t+Number(r.tb_sek||0),0);
-  const yr=rows.find(r=>r.entry_date===isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-1)));
-  const dd=yr&&Number(yr.sales)>0?Math.round((ts-Number(yr.sales))/Number(yr.sales)*100):null;
-  const last30=rows.filter(r=>r.entry_date>=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-(span-1)))).sort((a,b)=>a.entry_date<b.entry_date?-1:1);
-  const psum=last30.reduce((t,r)=>t+Number(r.sales||0),0),pFrom=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-(span*2-1))),pTo=isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-span+1)),pp=rows.filter(r=>r.entry_date>=pFrom&&r.entry_date<pTo).reduce((t,r)=>t+Number(r.sales||0),0);
-  const el=wdCount(now.getFullYear(),now.getMonth(),1,now.getDate()),tot=wdCount(now.getFullYear(),now.getMonth(),1,new Date(now.getFullYear(),now.getMonth()+1,0).getDate()),fc=el>0?Math.round(ms/el*tot):0;
-  const recent=[...rows].sort((a,b)=>a.entry_date<b.entry_date?1:-1).slice(0,7);
-  const upd=fetchedAt?new Date(fetchedAt).toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}):'–';
-  const head=<header className="mo-head"><div><h2>Stilles översikt</h2><p className="sub">{dayName} · Skrivskyddad vy</p></div><div className="mo-status"><i className={'live'+(today?'':' idle')}/>Uppdaterad {upd} · {today?'idag registrerad':'ingen registrering idag än'}</div></header>;
-  if(!rows.length)return<div className="mo">{head}<Motivation/><div className="c empty"><div className="empty-ic">◌</div><h3>Inga siffror ännu</h3><p>Så fort Stille registrerar sin första dag dyker allt upp här automatiskt.</p></div></div>;
-  const bar=(label:string,v:number,goal:number)=>{const p=Math.min(100,pct(v,goal));return<div className="mo-bar"><div className="mo-bar-t"><span>{label}</span><b className="num">{v} / {goal||'–'}</b></div><div className="bar"><i style={{width:(goal?p:0)+'%'}}/></div></div>};
-  return<div className="mo">{head}<Motivation/>
-    <section className="mo-hero">
-      <div className="c mo-today tilt"><div className="k">Idag</div><div className="mo-big num"><CountUp n={ts}/><small>sälj</small></div>
-        {dd!==null&&<span className={'chip-d '+(dd>=0?'pos':'neg')}>{dd>=0?'▲':'▼'} {Math.abs(dd)}% mot igår</span>}<div className="s">TB idag: {sv(tt)} kr</div></div>
-      <div className="c mo-ring tilt"><Ring p={pct(ts,dg)}sub={dg?`mål ${dg}`:'inget mål'}/><div className="k">Dagsmål</div></div>
-    </section>
-    <ManagerReport rows={rows}goal={g}/>
-    <div className="c mo-prog"><div className="k">Framsteg mot mål</div>{bar('Idag',ts,dg)}{bar('Månaden',ms,mg)}<div className="s">TB i månaden: {sv(mt)} kr</div><div className="mo-fc"><span>Prognos månaden (uppskattning)</span><b className="num">≈ {fc} sälj{mg>0&&<small className={fc>=mg?'pos':'neg'}> · {Math.round(fc/mg*100)}% av målet</small>}</b></div></div>
-    <div className="c sc mo-chart"><div className="mo-chart-h"><div className="k">Senaste {span} dagarna</div><div className="seg mo-seg">{[7,14,30].map(n=><button key={n}className={span===n?'on':''}onClick={()=>setSpan(n)}>{n} d</button>)}</div></div>{last30.length?<><Chart a={last30}goal={dg}/><div className="s">{psum} sälj under perioden{pp>0?<> · <b className={psum>=pp?'pos':'neg'}>{psum>=pp?'▲':'▼'} {Math.abs(Math.round((psum-pp)/pp*100))}%</b> mot föregående {span} dagar</>:null}</div></>:<p className="s">Inga registreringar under perioden.</p>}</div>
-    <div className="mo-two"><StreakDots rows={rows}/><WeekdayInsight rows={rows}/></div>
-    <div className="c mo-tl"><div className="k">Senaste aktivitet</div><ol className="tl">{recent.map(r=><li key={r.entry_date}><span className="tl-d">{new Date(r.entry_date+'T12:00:00').toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'short'})}</span><b className="num">{Number(r.sales)} sälj</b><span className="tl-t num">{sv(Number(r.tb_sek))} kr</span></li>)}</ol></div>
-  </div>
-}
-
-function wdCount(y:number,m:number,from:number,to:number){let n=0;for(let d=from;d<=to;d++){const w=new Date(y,m,d).getDay();if(w!==0&&w!==6)n++}return n}
 const WD=['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
 
 /* 1. Rutinrad – senaste 14 dagarna */
@@ -257,44 +238,101 @@ function WeekdayInsight({rows}:{rows:Row[]}){
 }
 
 /* 3. Fokus-timer (25/5) */
-function FocusTimer(){
-  const M={focus:25*60,break:5*60};
-  const[mode,setMode]=useState<'focus'|'break'>('focus');const[left,setLeft]=useState(M.focus);const[run,setRun]=useState(false);
-  const endRef=useRef(0);const key='sd_pomo_'+isoD(new Date());const[done,setDone]=useState(0);
-  useEffect(()=>{try{setDone(Number(localStorage.getItem(key)||0))}catch{}},[key]);
-  useEffect(()=>{if(!run)return;const id=window.setInterval(()=>{const l=Math.max(0,Math.round((endRef.current-Date.now())/1000));setLeft(l);
-    if(l<=0){window.clearInterval(id);setRun(false);try{beep(660,.15,'sine',.05);setTimeout(()=>beep(880,.2,'sine',.05),180)}catch{}
-      if(mode==='focus'){const n=done+1;setDone(n);try{localStorage.setItem(key,String(n))}catch{}setMode('break');setLeft(M.break)}else{setMode('focus');setLeft(M.focus)}}},500);return()=>window.clearInterval(id)},[run,mode,done,key]);
-  const total=M[mode],C=2*Math.PI*44,mm=String(Math.floor(left/60)).padStart(2,'0'),ss=String(left%60).padStart(2,'0');
-  const toggle=()=>{if(run){setRun(false)}else{endRef.current=Date.now()+left*1000;setRun(true)}};
-  const reset=()=>{setRun(false);setMode('focus');setLeft(M.focus)};
-  return<div className={'c pomo '+mode}><div className="k">Fokus-timer</div><div className="pomo-r"><svg viewBox="0 0 100 100"><circle cx="50"cy="50"r="44"className="pomo-bg"/><circle cx="50"cy="50"r="44"className="pomo-fg"strokeDasharray={C}strokeDashoffset={C*(1-left/total)}/></svg><div className="pomo-t num">{mm}:{ss}</div></div>
-    <div className="row"><button className="b pri"onClick={toggle}>{run?'Pausa':'Starta'}</button><button className="b ghost"onClick={reset}>Nollställ</button></div><div className="s">{mode==='focus'?'Fokusblock':'Paus'} · {done} block klara idag</div></div>
+const TIMER_SECONDS={focus:25*60,break:5*60} as const;
+type TimerMode=keyof typeof TIMER_SECONDS;
+function FocusTimer({sound}:{sound:boolean}){
+  const[mode,setMode]=useState<TimerMode>('focus');const[left,setLeft]=useState(TIMER_SECONDS.focus);const[run,setRun]=useState(false);
+  const endRef=useRef(0);const[dayKey]=useState(()=>isoD(new Date()));const key='sd_pomo_state_'+dayKey;const doneKey='sd_pomo_'+dayKey;
+  const[done,setDone]=useState(0);const[restored,setRestored]=useState(false);
+  useEffect(()=>{
+    let count=0;
+    try{count=Math.max(0,Number(localStorage.getItem(doneKey)||0));if(!Number.isFinite(count))count=0}catch{}
+    setDone(count);
+    try{
+      const saved=JSON.parse(localStorage.getItem(key)||'null');
+      if(saved&&(saved.mode==='focus'||saved.mode==='break')){
+        const savedMode=saved.mode as TimerMode;
+        if(saved.running&&Number.isFinite(Number(saved.endsAt))){
+          const endsAt=Number(saved.endsAt),remaining=Math.max(0,Math.ceil((endsAt-Date.now())/1000));
+          if(remaining>0){endRef.current=endsAt;setMode(savedMode);setLeft(Math.min(TIMER_SECONDS[savedMode],remaining));setRun(true)}
+          else{
+            const nextMode:TimerMode=savedMode==='focus'?'break':'focus';
+            if(savedMode==='focus'){count+=1;setDone(count);localStorage.setItem(doneKey,String(count))}
+            setMode(nextMode);setLeft(TIMER_SECONDS[nextMode]);setRun(false);
+            localStorage.setItem(key,JSON.stringify({mode:nextMode,left:TIMER_SECONDS[nextMode],running:false,endsAt:0}));
+          }
+        }else{
+          const savedLeft=Number(saved.left);
+          setMode(savedMode);setLeft(Number.isFinite(savedLeft)?Math.max(0,Math.min(TIMER_SECONDS[savedMode],savedLeft)):TIMER_SECONDS[savedMode]);setRun(false);
+        }
+      }
+    }catch{}
+    setRestored(true);
+  },[key,doneKey]);
+  useEffect(()=>{
+    if(!run||!restored)return;
+    const id=window.setInterval(()=>{
+      const remaining=Math.max(0,Math.ceil((endRef.current-Date.now())/1000));setLeft(remaining);
+      if(remaining<=0){
+        window.clearInterval(id);setRun(false);
+        if(sound){try{beep(660,.15,'sine',.05);window.setTimeout(()=>beep(880,.2,'sine',.05),180)}catch{}}
+        if(mode==='focus'){const n=done+1;setDone(n);try{localStorage.setItem(doneKey,String(n))}catch{}}
+        const nextMode:TimerMode=mode==='focus'?'break':'focus';setMode(nextMode);setLeft(TIMER_SECONDS[nextMode]);
+      }
+    },500);
+    return()=>window.clearInterval(id);
+  },[run,restored,mode,done,key,doneKey,sound]);
+  useEffect(()=>{
+    if(!restored||run)return;
+    try{localStorage.setItem(key,JSON.stringify({mode,left,running:false,endsAt:0}))}catch{}
+  },[restored,run,mode,left,key]);
+  const total=TIMER_SECONDS[mode],C=2*Math.PI*44,mm=String(Math.floor(left/60)).padStart(2,'0'),ss=String(left%60).padStart(2,'0');
+  const toggle=()=>{
+    if(run){setRun(false);return}
+    const endsAt=Date.now()+left*1000;endRef.current=endsAt;setRun(true);
+    try{localStorage.setItem(key,JSON.stringify({mode,left,running:true,endsAt}))}catch{}
+  };
+  const reset=()=>{endRef.current=0;setRun(false);setMode('focus');setLeft(TIMER_SECONDS.focus)};
+  return<div className={'c pomo '+mode}aria-busy={!restored}><div className="k">Fokus-timer</div>
+    <div className="pomo-r"role="timer"aria-label={`${mode==='focus'?'Fokus':'Paus'} återstår ${mm}:${ss}`}>
+      <svg viewBox="0 0 100 100"aria-hidden="true"><circle cx="50"cy="50"r="44"className="pomo-bg"/><circle cx="50"cy="50"r="44"className="pomo-fg"strokeDasharray={C}strokeDashoffset={C*(1-left/total)}/></svg>
+      <div className="pomo-t num"aria-hidden="true">{mm}:{ss}</div>
+    </div>
+    <div className="row"><button type="button"className="b pri"disabled={!restored}onClick={toggle}>{!restored?'Laddar…':run?'Pausa':'Starta'}</button><button type="button"className="b ghost"disabled={!restored}onClick={reset}>Nollställ</button></div>
+    <div className="s"aria-live="polite">{mode==='focus'?'Fokusblock':'Paus'} · {done} block klara idag</div>
+  </div>
 }
 
 /* 4–8. Säljarens extra-paket: påminnelse, rekordjakt, plan, dagsrapport */
-function SellerExtras({rows,g,ts,tt,hasToday}:{rows:Row[];g:Goals;ts:number;tt:number;hasToday:boolean}){
+function SellerExtras({rows,g,ts,tt,hasToday,paceReliable,registeredWorkdays,elapsedWorkdays,remainingWorkdays,sound}:{rows:Row[];g:Goals;ts:number;tt:number;hasToday:boolean;paceReliable:boolean;registeredWorkdays:number;elapsedWorkdays:number;remainingWorkdays:number;sound:boolean}){
   const[copied,setCopied]=useState(false);
-  const now=new Date(),y=now.getFullYear(),m=now.getMonth(),td=isoD(now);
-  const dg=Number(g.daily_sales||0),mg=Number((g as any).monthly_sales||0);
+  const now=new Date(),td=isoD(now);
+  const dg=Number(g.daily_sales||0),mg=Number(g.monthly_sales||0);
   const best=[...rows].sort((a,b)=>Number(b.sales)-Number(a.sales))[0],bs=best?Number(best.sales):0;
   const mo=rows.filter(r=>r.entry_date.startsWith(td.slice(0,7))),ms=mo.reduce((t,r)=>t+Number(r.sales||0),0);
-  const left=wdCount(y,m,now.getDate(),new Date(y,m+1,0).getDate()),needM=Math.max(0,mg-ms),perDay=left>0?needM/left:needM;
-  const chase=bs===0?null:ts>bs?'Nytt rekord idag! 🚀':ts===bs?'Du har jämnat ditt rekord – ett till slår det!':`${bs-ts} sälj kvar till ditt rekord (${bs})`;
-  const report=`Dagsrapport ${td}: ${ts} sälj${dg?` (${Math.round(ts/dg*100)}% av dagsmål ${dg})`:''}, TB ${sv(tt)} kr. Månaden hittills: ${ms} sälj.`;
+  const needM=paceReliable?Math.max(0,mg-ms):0,perDay=paceReliable&&remainingWorkdays>0?needM/remainingWorkdays:null;
+  const chase=!hasToday
+    ?(bs>0?'Dagens siffror saknas – registrera dem för att jämföra med rekordet.':'Registrera dagens resultat för att starta rekordjakten.')
+    :bs===0?'Ingen rekorddag ännu – fortsätt registrera dina resultat.'
+    :ts>bs?'Nytt rekord idag! 🚀'
+    :ts===bs?'Du har jämnat ditt rekord – ett till slår det!':`${bs-ts} sälj kvar till ditt rekord (${bs})`;
+  const dayReport=hasToday?`${ts} sälj${dg?` (${Math.round(ts/dg*100)}% av dagsmålet ${dg})`:''}, TB ${sv(tt)} kr.`:'Dagens resultat är inte registrerat.';
+  const monthReport=mo.length?`Månaden hittills: ${ms} sälj registrerade.`:'Inga registreringar den här månaden ännu.';
+  const report=`Dagsrapport ${td}: ${dayReport} ${monthReport}`;
   const copy=async()=>{try{await navigator.clipboard.writeText(report)}catch{const t=document.createElement('textarea');t.value=report;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch{}t.remove()}setCopied(true);setTimeout(()=>setCopied(false),1800)};
   const late=now.getHours()>=15&&!hasToday;
+  const progress=hasToday&&bs>0?Math.min(100,ts/bs*100):0;
   return<div className="sx">
-    {late&&<div className="c sx-late"><div><b>Du har inte registrerat idag än</b><div className="s">Lägg in dagens siffror så Affe ser dem direkt.</div></div><button className="b pri"onClick={()=>document.querySelector('.fix')?.scrollIntoView({behavior:'smooth',block:'center'})}>Registrera nu</button></div>}
+    {late&&<div className="c sx-late"><div><b>Du har inte registrerat idag än</b><div className="s">Lägg in dagens siffror så Affe ser dem direkt.</div></div><button type="button"className="b pri"onClick={()=>{const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;document.querySelector('.fix')?.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'})}}>Registrera nu</button></div>}
     <div className="sx-g">
-      <div className="c sx-rec"><div className="k">Rekordjakt</div><div className="sx-big num">{bs?`${Math.min(ts,bs)} / ${bs}`:'–'}</div><div className="bar"><i style={{width:(bs?Math.min(100,ts/bs*100):0)+'%'}}/></div><div className="s">{chase||'Registrera din första dag för att starta rekordjakten.'}</div></div>
+      <div className="c sx-rec"><div className="k">Rekordjakt</div><div className="sx-big num">{bs?`${hasToday?Math.min(ts,bs):'–'} / ${bs}`:'–'}</div><div className="bar"><i style={{width:progress+'%'}}/></div><div className="s">{chase}</div></div>
       <div className="c sx-plan"><div className="k">Så når du målen</div>
-        <div className="sx-row"><span>Dagsmål</span><b className="num">{dg?(ts>=dg?'Klart ✓':`${dg-ts} kvar`):'–'}</b></div>
-        <div className="sx-row"><span>Månadsmål</span><b className="num">{mg?(needM===0?'Klart ✓':`${needM} kvar`):'–'}</b></div>
-        <div className="sx-row"><span>Behövs per arbetsdag</span><b className="num">{mg&&needM>0?perDay.toFixed(1):'–'}</b></div>
-        <div className="s">{left} arbetsdagar kvar i månaden (inkl. idag).</div></div>
-      <FocusTimer/>
-      <div className="c sx-rep"><div className="k">Dagsrapport</div><p className="sx-txt">{report}</p><button className="b pri"onClick={copy}>{copied?'Kopierat ✓':'Kopiera rapport'}</button></div>
+        <div className="sx-row"><span>Dagsmål</span><b className="num">{dg?(hasToday?(ts>=dg?'Klart ✓':`${dg-ts} kvar`):'Ej registrerat'):'–'}</b></div>
+        <div className="sx-row"><span>Månadsmål</span><b className="num">{!paceReliable?'Underlag saknas':mg?(needM===0?'Klart ✓':`${needM} kvar`):'–'}</b></div>
+        <div className="sx-row"><span>Behövs per arbetsdag</span><b className="num">{paceReliable&&mg&&needM>0?(perDay===null?'–':perDay.toFixed(1)):'–'}</b></div>
+        <div className="s">{paceReliable?(remainingWorkdays>0?`${remainingWorkdays} arbetsdagar kvar i månaden (inkl. idag).`:needM>0?'Månadens arbetsdagar är slut.':'Månadsmålet är nått.'):`Månadstakt pausad: ${registeredWorkdays}/${elapsedWorkdays} vardagar registrerade.`}</div></div>
+      <FocusTimer sound={sound}/>
+      <div className="c sx-rep"><div className="k">Dagsrapport</div><p className="sx-txt">{report}</p><button type="button"className="b pri"onClick={copy}>{copied?'Kopierat ✓':'Kopiera rapport'}</button></div>
     </div>
     <div className="sx-g2"><StreakDots rows={rows}/><WeekdayInsight rows={rows}/></div>
   </div>
@@ -307,40 +345,57 @@ function longestStreak(rows:Row[]){
   for(const k of ds){cur=prev&&nextWd(prev)===k?cur+1:1;if(cur>best)best=cur;prev=k}
   return best
 }
-function Freshness({at,onRefresh}:{at:number;onRefresh:()=>any}){
+function Freshness({at,onRefresh}:{at:number;onRefresh:()=>Promise<void>}){
   const[busy,setBusy]=useState(false);const t=at?new Date(at).toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}):'–';
-  return<button className="fresh"title="Uppdatera nu"aria-label="Uppdatera siffrorna"onClick={async()=>{setBusy(true);try{await onRefresh()}finally{setTimeout(()=>setBusy(false),500)}}}><span className={busy?'spin':''}>⟳</span> {t}</button>
+  return<button type="button"className="fresh"title={at?`Senast uppdaterad ${t}. Uppdatera nu.`:'Ingen uppdatering ännu. Försök igen.'}aria-label={busy?'Uppdaterar siffrorna':`Uppdatera siffrorna, senast ${t}`}aria-busy={busy}disabled={busy}onClick={async()=>{setBusy(true);try{await onRefresh()}finally{setBusy(false)}}}><span className={busy?'spin':''}aria-hidden="true">⟳</span> {busy?'…':t}</button>
 }
-function NetStatus(){
+function NetStatus({onReconnect}:{onReconnect:()=>void}){
   const[off,setOff]=useState(false);
-  useEffect(()=>{const u=()=>setOff(!navigator.onLine);u();window.addEventListener('online',u);window.addEventListener('offline',u);return()=>{window.removeEventListener('online',u);window.removeEventListener('offline',u)}},[]);
+  useEffect(()=>{
+    const offline=()=>setOff(true);
+    const online=()=>{setOff(false);void onReconnect()};
+    offlineIfNeeded();
+    function offlineIfNeeded(){if(!navigator.onLine)setOff(true)}
+    window.addEventListener('online',online);window.addEventListener('offline',offline);
+    return()=>{window.removeEventListener('online',online);window.removeEventListener('offline',offline)}
+  },[onReconnect]);
   return off?<div className="netoff"role="status">Du är offline – siffrorna uppdateras när anslutningen är tillbaka.</div>:null
 }
 function ScrollPill(){
   const[st,setSt]=useState<'hide'|'down'|'up'>('hide');
-  useEffect(()=>{const f=()=>{const el=document.documentElement;setSt(el.scrollHeight<=window.innerHeight+160?'hide':window.scrollY<240?'down':'up')};f();window.addEventListener('scroll',f,{passive:true});window.addEventListener('resize',f);const id=window.setInterval(f,1500);return()=>{window.removeEventListener('scroll',f);window.removeEventListener('resize',f);window.clearInterval(id)}},[]);
+  useEffect(()=>{
+    let raf=0;const el=document.documentElement;
+    const update=()=>{const next:typeof st=el.scrollHeight<=window.innerHeight+160?'hide':window.scrollY<240?'down':'up';setSt(current=>current===next?current:next)};
+    const schedule=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(update)};
+    schedule();window.addEventListener('scroll',schedule,{passive:true});window.addEventListener('resize',schedule);
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(schedule):null;
+    if(observer)observer.observe(document.body);
+    return()=>{cancelAnimationFrame(raf);window.removeEventListener('scroll',schedule);window.removeEventListener('resize',schedule);observer?.disconnect()}
+  },[]);
   if(st==='hide')return null;
-  return<button className="scrollpill"aria-label={st==='down'?'Till botten':'Till toppen'}onClick={()=>window.scrollTo({top:st==='down'?document.documentElement.scrollHeight:0,behavior:'smooth'})}>{st==='down'?'↓':'↑'}</button>
+  return<button type="button"className="scrollpill"aria-label={st==='down'?'Till botten':'Till toppen'}onClick={()=>{const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;window.scrollTo({top:st==='down'?document.documentElement.scrollHeight:0,behavior:reduce?'auto':'smooth'})}}>{st==='down'?'↓':'↑'}</button>
 }
-function Checklist({can}:{can:boolean}){
-  const items=can?['Dagens siffror registrerade','Anteckning om dagen skriven','Fokus för imorgon bestämt']:['Dagens siffror kollade','Feedback skickad till Stille','Veckomålet kontrollerat'];
-  const key='sd_chk_'+(can?'s':'m')+'_'+isoD(new Date());const[on,setOn]=useState<boolean[]>(items.map(()=>false));
-  useEffect(()=>{try{const v=JSON.parse(localStorage.getItem(key)||'[]');setOn(items.map((_,i)=>!!v[i]))}catch{}},[key]);
-  const flip=(i:number)=>{const n=on.map((x,j)=>j===i?!x:x);setOn(n);try{localStorage.setItem(key,JSON.stringify(n))}catch{}};
-  const done=on.filter(Boolean).length;
-  return<div className="c chk"><div className="k">{can?'Dagens avslut':'Chefens koll'} · {done}/{items.length}</div><div className="chk-g">{items.map((t,i)=><button key={i}className={'chk-i'+(on[i]?' on':'')}aria-pressed={on[i]}onClick={()=>flip(i)}><i>{on[i]?'✓':''}</i>{t}</button>)}</div>{done===items.length&&<div className="s"style={{marginTop:8}}>Allt klart – snyggt jobbat idag. 🎯</div>}</div>
+function Checklist({can,hasToday}:{can:boolean;hasToday:boolean}){
+  const items=can?['Dagens siffror registrerade','Anteckning om dagen skriven','Fokus för imorgon bestämt']:['Dagens siffror kollade','Följ upp med Stille','Veckomålet kontrollerat'];
+  const manualCount=can?2:3,key='sd_chk_'+(can?'s':'m')+'_'+isoD(new Date());
+  const[on,setOn]=useState<boolean[]>(()=>Array(3).fill(false));
+  useEffect(()=>{try{const v=JSON.parse(localStorage.getItem(key)||'[]');setOn(Array.from({length:manualCount},(_,i)=>!!v[i]))}catch{setOn(Array(manualCount).fill(false))}},[key,manualCount]);
+  const flip=(i:number)=>{if(can&&i===0)return;const index=can?i-1:i,n=on.map((x,j)=>j===index?!x:x);setOn(n);try{localStorage.setItem(key,JSON.stringify(n))}catch{}};
+  const checked=(i:number)=>can&&i===0?hasToday:!!on[can?i-1:i];
+  const done=items.reduce((n,_,i)=>n+(checked(i)?1:0),0);
+  return<div className="c chk"><div className="k">{can?'Dagens avslut':'Chefens koll'} · {done}/{items.length}</div><div className="chk-g">{items.map((t,i)=><button type="button"key={i}className={'chk-i'+(checked(i)?' on':'')}aria-pressed={checked(i)}disabled={can&&i===0}title={can&&i===0?'Uppdateras automatiskt från dagens registrering':''}onClick={()=>flip(i)}><i aria-hidden="true">{checked(i)?'✓':''}</i>{t}</button>)}</div>{done===items.length&&<div className="s"style={{marginTop:8}}>Allt klart – snyggt jobbat idag. 🎯</div>}</div>
 }
 function MonthSummary({rows,g}:{rows:Row[];g:Goals}){
   const[copied,setCopied]=useState(false);
   const now=new Date(),y=now.getFullYear(),m=now.getMonth(),pre=(a:number,b:number)=>a+'-'+pad2(b+1);
-  const pmD=new Date(y,m-1,1),cm=rows.filter(r=>r.entry_date.startsWith(pre(y,m))),pm=rows.filter(r=>r.entry_date.startsWith(pre(pmD.getFullYear(),pmD.getMonth())));
+  const pmD=new Date(y,m-1,1),prevDay=Math.min(now.getDate(),new Date(y,m,0).getDate()),prevThrough=isoD(new Date(y,m-1,prevDay)),cm=rows.filter(r=>r.entry_date.startsWith(pre(y,m))),pm=rows.filter(r=>r.entry_date>=isoD(pmD)&&r.entry_date<=prevThrough);
   const S=(x:Row[])=>x.reduce((t,r)=>t+Number(r.sales||0),0),T=(x:Row[])=>x.reduce((t,r)=>t+Number(r.tb_sek||0),0),H=(x:Row[])=>x.reduce((t,r)=>t+Number((r as any).hours||0),0);
   const cs=S(cm),ct=T(cm),ps=S(pm),pt=T(pm),days=cm.filter(r=>Number(r.sales)>0).length,best=[...cm].sort((a,b)=>Number(b.sales)-Number(a.sales))[0];
   const tbPer=cs?ct/cs:0,ptb=ps?pt/ps:0,hrs=H(cm),perHr=hrs>0?cs/hrs:0,diff=ps>0?Math.round((cs-ps)/ps*100):null;
   const l30=rows.filter(r=>r.entry_date>=isoD(new Date(y,m,now.getDate()-29))&&Number(r.sales)>0),avg30=l30.length?S(l30)/l30.length:0,suggest=avg30?Math.max(1,Math.ceil(avg30*1.1)):0;
   const mn=now.toLocaleDateString('sv-SE',{month:'long'});
-  const text=cs?`${mn[0].toUpperCase()+mn.slice(1)} hittills: ${cs} sälj och ${sv(ct)} kr TB på ${days} säljdagar${best?`. Bästa dag: ${best.entry_date} med ${Number(best.sales)} sälj`:''}${diff!==null?`. ${diff>=0?'Upp':'Ner'} ${Math.abs(diff)}% mot föregående månad`:''}.`:'Inga registrerade sälj den här månaden ännu.';
-  const dow=(now.getDay()+6)%7,a=isoD(new Date(y,m,now.getDate()-dow)),b=isoD(new Date(y,m,now.getDate()-dow-7)),wk=rows.filter(r=>r.entry_date>=a),pw=rows.filter(r=>r.entry_date>=b&&r.entry_date<a);
+  const text=cs?`${mn[0].toUpperCase()+mn.slice(1)} hittills: ${cs} sälj och ${sv(ct)} kr TB på ${days} säljdagar${best?`. Bästa dag: ${best.entry_date} med ${Number(best.sales)} sälj`:''}${diff!==null?`. ${diff>=0?'Upp':'Ner'} ${Math.abs(diff)}% mot samma period förra månaden`:''}.`:cm.length?'Inga sälj registrerade den här månaden ännu.':'Inga registreringar den här månaden ännu.';
+  const dow=(now.getDay()+6)%7,a=isoD(new Date(y,m,now.getDate()-dow)),b=isoD(new Date(y,m,now.getDate()-dow-7)),wk=rows.filter(r=>r.entry_date>=a&&r.entry_date<=isoD(now)),pw=rows.filter(r=>r.entry_date>=b&&r.entry_date<a);
   const wtxt=`Veckorapport: ${S(wk)} sälj, TB ${sv(T(wk))} kr hittills denna vecka${S(pw)?` (förra veckan ${S(pw)} sälj, ${sv(T(pw))} kr)`:''}.`;
   const copy=async()=>{try{await navigator.clipboard.writeText(wtxt)}catch{const t=document.createElement('textarea');t.value=wtxt;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch{}t.remove()}setCopied(true);setTimeout(()=>setCopied(false),1800)};
   return<div className="c msum"><div className="msum-h"><div className="k">Sammanfattning · {mn}</div><div className="row noprint"><button className="b ghost"onClick={copy}>{copied?'Kopierat ✓':'Kopiera veckorapport'}</button><button className="b ghost"onClick={()=>window.print()}>🖨 Skriv ut / PDF</button></div></div>
@@ -356,22 +411,58 @@ function Compare({rows}:{rows:Row[]}){
   const now=new Date(),d=(n:number)=>isoD(new Date(now.getFullYear(),now.getMonth(),now.getDate()-n));
   const[a1,setA1]=useState(d(6)),[a2,setA2]=useState(d(0)),[b1,setB1]=useState(d(13)),[b2,setB2]=useState(d(7));
   const preset=(n:number)=>{setA1(d(n-1));setA2(d(0));setB1(d(2*n-1));setB2(d(n))};
-  const month=()=>{const y=now.getFullYear(),m=now.getMonth();setA1(isoD(new Date(y,m,1)));setA2(isoD(now));setB1(isoD(new Date(y,m-1,1)));setB2(isoD(new Date(y,m,0)))};
-  const agg=(f:string,t:string)=>{const x=rows.filter(r=>r.entry_date>=f&&r.entry_date<=t),s=x.reduce((q,r)=>q+Number(r.sales||0),0),tb=x.reduce((q,r)=>q+Number(r.tb_sek||0),0),dd=x.filter(r=>Number(r.sales)>0).length;return{s,tb,dd,avg:dd?s/dd:0}};
-  const A=agg(a1,a2),B=agg(b1,b2);
-  const line:[string,number,number,boolean][]=[['Sälj',A.s,B.s,false],['TB (kr)',A.tb,B.tb,false],['Säljdagar',A.dd,B.dd,false],['Snitt sälj/dag',A.avg,B.avg,true]];
-  return<div className="c cmp"><div className="msum-h"><div className="k">Jämför två perioder</div><div className="row noprint"><button className="b ghost"onClick={()=>preset(7)}>7 d mot 7 d</button><button className="b ghost"onClick={()=>preset(30)}>30 d mot 30 d</button><button className="b ghost"onClick={month}>Månad mot månad</button></div></div>
-    <div className="cmp-in"><div><label>Period A</label><div className="row"><input type="date"value={a1}onChange={e=>setA1(e.target.value)}/><input type="date"value={a2}onChange={e=>setA2(e.target.value)}/></div></div><div><label>Period B</label><div className="row"><input type="date"value={b1}onChange={e=>setB1(e.target.value)}/><input type="date"value={b2}onChange={e=>setB2(e.target.value)}/></div></div></div>
-    <table><thead><tr><th></th><th>A</th><th>B</th><th>Skillnad</th></tr></thead><tbody>{line.map(([k,x,y,dec])=>{const dl=y>0?Math.round((x-y)/y*100):null;return<tr key={k}><td>{k}</td><td className="num">{dec?x.toFixed(1):sv(x)}</td><td className="num">{dec?y.toFixed(1):sv(y)}</td><td className={'num '+(dl===null?'neu':dl>=0?'pos':'neg')}>{dl===null?'–':(dl>=0?'▲ ':'▼ ')+Math.abs(dl)+'%'}</td></tr>})}</tbody></table></div>
+  const monthToDate=()=>{
+    const y=now.getFullYear(),m=now.getMonth(),prevLast=new Date(y,m,0),prevDay=Math.min(now.getDate(),prevLast.getDate());
+    setA1(isoD(new Date(y,m,1)));setA2(isoD(now));setB1(isoD(new Date(y,m-1,1)));setB2(isoD(new Date(y,m-1,prevDay)));
+  };
+  type Period={rows:number;s:number;tb:number;days:number;avg:number|null};
+  const agg=(from:string,to:string):Period=>{
+    const x=rows.filter(r=>r.entry_date>=from&&r.entry_date<=to),sales=x.reduce((q,r)=>q+Number(r.sales||0),0),tb=x.reduce((q,r)=>q+Number(r.tb_sek||0),0),days=x.filter(r=>Number(r.sales)>0).length;
+    return{rows:x.length,s:sales,tb,days,avg:days?sales/days:null};
+  };
+  const validA=!!a1&&!!a2&&a1<=a2,validB=!!b1&&!!b2&&b1<=b2;
+  const A:Period|null=validA?agg(a1,a2):null,B:Period|null=validB?agg(b1,b2):null;
+  const line:[string,keyof Period,boolean][]=[['Sälj','s',false],['TB (kr)','tb',false],['Säljdagar','days',false],['Snitt sälj/säljdag','avg',true]];
+  const display=(period:Period|null,key:keyof Period,decimal:boolean)=>{
+    if(!period||period.rows===0)return'–';
+    const value=period[key];if(value===null)return'–';
+    return decimal?Number(value).toFixed(1):sv(Number(value));
+  };
+  return<div className="c cmp">
+    <div className="msum-h"><div className="k">Jämför två perioder</div><div className="row noprint"><button type="button"className="b ghost"onClick={()=>preset(7)}>7 d mot 7 d</button><button type="button"className="b ghost"onClick={()=>preset(30)}>30 d mot 30 d</button><button type="button"className="b ghost"onClick={monthToDate}>Månad mot månad hittills</button></div></div>
+    <div className="cmp-in">
+      <div><label>Period A</label><div className="row"><input aria-label="Period A, från"type="date"max={today()}value={a1}onChange={e=>setA1(e.target.value)}/><input aria-label="Period A, till"type="date"max={today()}value={a2}onChange={e=>setA2(e.target.value)}/></div></div>
+      <div><label>Period B</label><div className="row"><input aria-label="Period B, från"type="date"max={today()}value={b1}onChange={e=>setB1(e.target.value)}/><input aria-label="Period B, till"type="date"max={today()}value={b2}onChange={e=>setB2(e.target.value)}/></div></div>
+    </div>
+    {(!validA||!validB)&&<p className="s"role="alert">Välj giltiga datumintervall där startdatum inte ligger efter slutdatum.</p>}
+    {A?.rows===0||B?.rows===0?<p className="s"role="status">Minst en period saknar registrerade dagar. De visas som streck, inte som nollor.</p>:null}
+    <table><thead><tr><th></th><th>A</th><th>B</th><th>Skillnad</th></tr></thead><tbody>{line.map(([label,key,decimal])=>{
+      const av=A?.[key],bv=B?.[key];
+      const delta=A&&B&&A.rows>0&&B.rows>0&&av!==null&&bv!==null&&Number(bv)>0?Math.round((Number(av)-Number(bv))/Number(bv)*100):null;
+      return<tr key={label}><td>{label}</td><td className="num">{display(A,key,decimal)}</td><td className="num">{display(B,key,decimal)}</td><td className={'num '+(delta===null?'neu':delta>=0?'pos':'neg')}>{delta===null?'–':(delta>=0?'▲ ':'▼ ')+Math.abs(delta)+'%'}</td></tr>
+    })}</tbody></table>
+  </div>
 }
 
-/* v17: riktig 3D – dina senaste 7 dagar som lutande stapelscen */
+/* 3D visualization of confirmed rows only: a missing row is not treated as zero. */
 function Bars3D({rows}:{rows:Row[]}){
-  const now=new Date(),td=isoD(now),L=['S','M','T','O','T','F','L'];
-  const days=Array.from({length:7},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-(6-i)),k=isoD(d),r=rows.find(x=>x.entry_date===k);return{k,w:L[d.getDay()],n:Number(r?.sales||0),tb:Number(r?.tb_sek||0)}});
-  const mx=Math.max(1,...days.map(d=>d.n)),tot=days.reduce((t,d)=>t+d.n,0),best=days.reduce((a,d)=>d.n>a.n?d:a,days[0]);
-  return<div className="c tilt b3"><div className="b3-h"><div><div className="k">Senaste 7 dagarna · 3D</div><div className="b3-tot num">{tot} <small>sälj</small></div></div><div className="s">{tot?`Bästa dag: ${best.w} (${best.n} sälj)`:'Inga sälj registrerade den senaste veckan'}</div></div>
-    <div className="b3-stage"aria-hidden="true"><div className="b3-scene">{days.map((d,i)=><div key={d.k}className={'b3-bar'+(d.k===td?' today':'')+(d.n===0?' zero':'')}style={{'--i':i,'--h':(d.n===0?8:Math.max(18,d.n/mx*150))+'px'}as any}title={`${d.k}: ${d.n} sälj · ${sv(d.tb)} kr`}><div className="f front"><b className="num">{d.n}</b><small>{d.w}</small></div><div className="f side"/><div className="f top"/></div>)}<div className="b3-floor"/></div></div></div>
+  const [yy,mm,dd]=today().split('-').map(Number),now=new Date(yy,mm-1,dd),td=today(),L=['S','M','T','O','T','F','L'];
+  const days=Array.from({length:7},(_,i)=>{
+    const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-(6-i)),k=isoD(d),r=rows.find(x=>x.entry_date===k);
+    return{k,w:L[d.getDay()],sales:r?Number(r.sales):null,tb:r?Number(r.tb_sek):null};
+  });
+  const recorded=days.filter(d=>d.sales!==null),mx=Math.max(1,...recorded.map(d=>d.sales||0));
+  const total=recorded.reduce((n,d)=>n+(d.sales||0),0),best=recorded.reduce<(typeof recorded)[number]|null>((top,d)=>!top||(d.sales||0)>(top.sales||0)?d:top,null);
+  const summary=best?`Bästa registrerade dag: ${best.k} (${best.sales} sälj)`:'Ingen registrering under de senaste sju dagarna.';
+  return<section className="c tilt b3"aria-labelledby="sales-3d-title">
+    <div className="b3-h"><div><div id="sales-3d-title"className="k">Senaste 7 dagarna · 3D</div><div className="b3-tot num">{recorded.length?fmt(total):'–'} <small>{recorded.length?'sälj':'registreringar'}</small></div></div><div className="s">{summary}</div></div>
+    <div className="b3-stage"aria-hidden="true"><div className="b3-scene">{days.map((d,i)=>{
+      const height=d.sales===null?6:d.sales===0?8:Math.max(18,(d.sales/mx)*150);
+      const classes='b3-bar'+(d.k===td?' today':'')+(d.sales===0?' zero':'')+(d.sales===null?' missing':'');
+      return<div key={d.k}className={classes}style={{'--i':i,'--h':height+'px'}as any}title={d.sales===null?`${d.k}: ingen registrering`:`${d.k}: ${d.sales} sälj · ${sv(d.tb||0)} kr`}><div className="f front"><b className="num">{d.sales===null?'–':d.sales}</b><small>{d.w}</small></div><div className="f side"/><div className="f top"/></div>
+    })}<div className="b3-floor"/></div></div>
+    <ul className="sr-only"aria-label="Detaljer för försäljning senaste sju dagarna">{days.map(d=><li key={d.k}>{d.k}: {d.sales===null?'ingen registrering':`${d.sales} sälj, ${sv(d.tb||0)} kronor i TB`}</li>)}</ul>
+  </section>
 }
 
 export default function App(){
@@ -379,6 +470,7 @@ export default function App(){
   const[role,setRole]=useState<''|'seller'|'manager'>('');
   const[tab,setTab]=useState<TabId>('overview');const[edit,setEdit]=useState<number|null>(null);
   const[toast,setToast]=useState('');const[loading,setLoading]=useState(true);const[fetchedAt,setFetchedAt]=useState(0);const[showAffeTease,setShowAffeTease]=useState(false);
+
   const[rg,setRg]=useState<'Idag'|'Denna vecka'|'Denna månad'|'Föregående månad'|'Detta år'|'Allt'>('Denna månad');
   const[msgs,setMsgs]=useState<Msg[]>([]);const[q,setQ]=useState('');const[busy,setBusy]=useState(false);
   const[ks,setKs]=useState<{configured:boolean;source:string|null}>({configured:false,source:null});const[keyIn,setKeyIn]=useState('');
@@ -435,7 +527,7 @@ export default function App(){
     setActivity(j.activity||[]);
     setLoading(false);loadC();
     fetch('/api/ai/key',{credentials:'same-origin'}).then(x=>x.json()).then(k=>{if(k.configured!==undefined)setKs(k)}).catch(()=>{});
-    fetch('/api/achievements',{credentials:'same-origin'}).then(x=>x.json()).then(a=>{if(Array.isArray(a.items))setUnlocked(new Set(a.items.map((x:any)=>x.key)))}).catch(()=>{}).finally(()=>{});
+    fetch('/api/achievements',{credentials:'same-origin'}).then(x=>x.json()).then(a=>{if(Array.isArray(a.items))setUnlocked(new Set(a.items.map((x:any)=>x.key)))}).catch(()=>{}).finally(()=>setAchReady(true));
   },[]);
   useEffect(()=>{load()},[load]);
   useEffect(()=>{if(!achReady||!rows.length||loading)return;
@@ -500,12 +592,14 @@ export default function App(){
   const todayRow=rows.find(r=>r.entry_date===today());
   const mo=rows.filter(r=>mon(r.entry_date)===mon(today()));
   const ts=todayRow?.sales||0,tt=todayRow?.tb_sek||0;
-  const ms=sum(mo,'sales'),mt=sum(mo,'tb_sek');const remainingWorkdays=workdaysLeft();
-  const planS=g.monthly_sales*(workdaysElapsed()/Math.max(workdaysTotal(),1));const ahead=ms-planS;
+  const ms=sum(mo,'sales'),mt=sum(mo,'tb_sek');const remainingWorkdays=workdaysLeft(),elapsedWorkdays=workdaysElapsed();
+  const registeredWorkdays=new Set(mo.filter(r=>r.entry_date<=today()&&isSalesWeekday(r.entry_date)).map(r=>r.entry_date)).size;
+  const paceReliable=elapsedWorkdays>0&&registeredWorkdays>=Math.min(3,elapsedWorkdays)&&registeredWorkdays/elapsedWorkdays>=.7;
+  const monthHasData=mo.length>0;const planS=g.monthly_sales*(elapsedWorkdays/Math.max(workdaysTotal(),1));const ahead=paceReliable?ms-planS:0;
   const A=range(rows,rg),B=prevRange(rows,rg);const hh=A.filter(r=>r.hours!=null);
   const best=[...A].sort((a,b)=>b.sales-a.sales)[0];const dl=sum(A,'sales')-sum(B,'sales');
   const streak=streakAt(rows,g);const bStreak=bestStreak(rows,g);
-  const proj=workdaysElapsed()>=5?(ms/Math.max(workdaysElapsed(),1))*workdaysTotal():null;
+  const proj=paceReliable&&registeredWorkdays>=5?(ms/registeredWorkdays)*workdaysTotal():null;
   const wdAvg=[1,2,3,4,5].map(w=>{const x=rows.filter(r=>new Date(r.entry_date+'T12:00').getDay()===w);return{n:['Mån','Tis','Ons','Tor','Fre'][w-1],v:x.length?sum(x,'sales')/x.length:0}});
   const wmax=Math.max(...wdAvg.map(x=>x.v),1);
   const pbd=pbDay(rows),pbt=pbTB(rows);const cmpM=compareMonths(rows);
@@ -521,13 +615,13 @@ export default function App(){
   const previousComparableEnd=new Date(previousWeekStart);previousComparableEnd.setDate(previousComparableEnd.getDate()+weekDayOffset+1);
   const currentWeekRows=rows.filter(r=>r.entry_date>=isoD(weekStartDate)&&r.entry_date<=dashboardDate);
   const comparablePrevWeekRows=rows.filter(r=>r.entry_date>=isoD(previousWeekStart)&&r.entry_date<isoD(previousComparableEnd));
-  const priorComparableSales=sum(comparablePrevWeekRows,'sales'),weekTrend=priorComparableSales>0?Math.round((sum(currentWeekRows,'sales')/priorComparableSales-1)*100):undefined;
+  const previousComparableByDate=new Map(comparablePrevWeekRows.map(r=>[r.entry_date,r]));const matchedCurrentWeekRows=currentWeekRows.filter(r=>isSalesWeekday(r.entry_date)&&(()=>{const d=new Date(r.entry_date+'T12:00:00');d.setDate(d.getDate()-7);return previousComparableByDate.has(isoD(d))})());const pairedCurrentSales=sum(matchedCurrentWeekRows,'sales'),pairedPreviousSales=matchedCurrentWeekRows.reduce((n,r)=>{const d=new Date(r.entry_date+'T12:00:00');d.setDate(d.getDate()-7);return n+Number(previousComparableByDate.get(isoD(d))?.sales||0)},0),weekTrend=matchedCurrentWeekRows.length&&pairedPreviousSales>0?Math.round((pairedCurrentSales/pairedPreviousSales-1)*100):undefined;
   const weekTotals=new Map(weekSales(rows.filter(r=>r.entry_date<=dashboardDate)).map(w=>[w.key,w]));
   const priorWeeks=Array.from({length:7},(_,i)=>{const d=new Date(weekStartDate);d.setDate(d.getDate()-7*(7-i));const key=weekKey(d),total=weekTotals.get(key);return{key,sales:total?.sales||0,tb:total?.tb||0}});
   const wks=[...priorWeeks,{key:currentWeekKey,sales:sum(currentWeekRows,'sales'),tb:sum(currentWeekRows,'tb_sek')}];
   const er=edit?rows.find(r=>r.id===edit):null;const alerts=buildAlerts(rows,g,role,unread);
   const greet=greeting();const dayName=new Date().toLocaleDateString('sv-SE',{weekday:'long',day:'numeric',month:'long'});
-  const pctToday=pct(ts,g.daily_sales);
+  const pctToday=todayRow?pct(ts,g.daily_sales):0;
   const pinnedComments=cm.filter(c=>c.pinned);const unpinned=cm.filter(c=>!c.pinned);
   const sortedCm=[...pinnedComments,...unpinned];
   const unlockedArr=ACHIEVEMENTS.filter(a=>unlocked.has(a.key));
@@ -536,12 +630,15 @@ export default function App(){
   const recentCoachRows=rows.filter(r=>r.entry_date<=today()).slice(-5);
   const recentCoachAverage=recentCoachRows.length?sum(recentCoachRows,'sales')/recentCoachRows.length:0;
   const monthlySalesGap=Math.max(g.monthly_sales-ms,0),monthlyTbGap=Math.max(g.monthly_tb-mt,0);
-  const requiredPerDay=remainingWorkdays>0?monthlySalesGap/remainingWorkdays:0;
+  const requiredPerDay=paceReliable&&remainingWorkdays>0?monthlySalesGap/remainingWorkdays:0;
   const coachLocalNow=new Date(),coachIsWorkday=coachLocalNow.getDay()>=1&&coachLocalNow.getDay()<=5;
-  const coachNeedsStep=rows.length>0&&(ahead< -Math.max(2,g.monthly_sales*.04)||(coachIsWorkday&&coachLocalNow.getHours()>=14&&ts<g.daily_sales));
-  const requiredPaceText=remainingWorkdays>0?`cirka ${f1(requiredPerDay)} sälj per arbetsdag`:`månadens arbetsdagar är slut; ${fmt(monthlySalesGap)} sälj återstår till målet`;
-  const coachPrompt=`Ge mig en kort, rak men schysst säljnudge på svenska. Dagens registrering: ${ts} av ${g.daily_sales} sälj. Den här månaden: ${ms} av ${g.monthly_sales}. Takt: ${ahead<0?`${f1(Math.abs(ahead))} sälj efter`:`${f1(ahead)} sälj före`} planen. Återstående arbetsdagar: ${remainingWorkdays}. Krävd takt: ${requiredPaceText}. Snitt senaste ${recentCoachRows.length} registrerade dagar: ${f1(recentCoachAverage)}. Säg om det är dags att steppa upp och ge EN konkret nästa handling för idag. Hitta inte på fakta, skuldbelägg inte och föreslå inga ändringar i databasen.`;
-  const coachPlanPrompt=`Gör en konkret plan för mig som säljare utifrån dagens registrering ${ts}/${g.daily_sales}, månad ${ms}/${g.monthly_sales}, takt ${ahead<0?`${f1(Math.abs(ahead))} efter plan`:`${f1(ahead)} före plan`}, ${remainingWorkdays} arbetsdagar kvar och ${requiredPaceText}. Ge tre tydliga steg för resten av dagen, håll tonen rak och respektfull och hitta inte på fakta.`;
+  const coachNeedsStep=rows.length>0&&((paceReliable&&ahead< -Math.max(2,g.monthly_sales*.04))||(coachIsWorkday&&coachLocalNow.getHours()>=14&&!todayRow));
+  const requiredPaceText=!paceReliable?`kan inte bedömas säkert (${registeredWorkdays} av ${elapsedWorkdays} arbetsdagar registrerade)`:remainingWorkdays>0?`cirka ${f1(requiredPerDay)} sälj per arbetsdag`:`månadens arbetsdagar är slut; ${fmt(monthlySalesGap)} sälj återstår till målet`;
+  const todayEvidence=todayRow?`${ts} av ${g.daily_sales} sälj`:'ingen registrering (behandla inte som noll)';
+  const monthEvidence=monthHasData?`${ms} registrerade sälj av ${g.monthly_sales}; ${registeredWorkdays} av ${elapsedWorkdays} vardagar registrerade`:'inga registreringar hittills';
+  const paceEvidence=!paceReliable?`kan inte bedömas säkert (${registeredWorkdays}/${elapsedWorkdays} registrerade vardagar)`: `${ahead<0?`${f1(Math.abs(ahead))} sälj efter`:`${f1(ahead)} sälj före`} planen`;
+  const coachPrompt=`Ge mig en kort, rak men schysst säljnudge på svenska. Dagens registrering: ${todayEvidence}. Den här månaden: ${monthEvidence}. Takt: ${paceEvidence}. Återstående arbetsdagar: ${remainingWorkdays}. Krävd takt: ${requiredPaceText}. Snitt senaste ${recentCoachRows.length} registrerade dagar: ${f1(recentCoachAverage)}. Om dagens registrering saknas, be mig registrera den först och dra ingen slutsats om dagens sälj. Om registreringstäckningen är ofullständig, säg att månadstakten inte kan bedömas säkert och be om komplettering. Ge EN konkret nästa handling. Hitta inte på fakta, skuldbelägg inte och föreslå inga ändringar i databasen.`;
+  const coachPlanPrompt=`Gör en konkret, respektfull plan för mig som säljare. Dagens registrering: ${todayEvidence}. Månadens registreringar: ${monthEvidence}. Månadstakt: ${paceEvidence}. Återstående arbetsdagar: ${remainingWorkdays}; nödvändig takt: ${requiredPaceText}. Om dagens data saknas eller registreringstäckningen är ofullständig ska du säga det tydligt; behandla inte frånvaro som noll och dra ingen säker slutsats om månadstakten. Ge tre korta steg utan att hitta på fakta.`;
 
   useEffect(()=>{
     if(!autoCoach||!can||!ks.configured||loading||!coachNeedsStep||!rows.length)return;
@@ -555,16 +652,18 @@ export default function App(){
   },[autoCoach,can,ks.configured,loading,coachNeedsStep,rows.length,remainingWorkdays,coachPrompt]);
 
   if(loading)return<div className="skel"aria-busy="true"aria-label="Laddar"><div className="skel-h"/><div className="skel-g"><i/><i/><i/><i/></div><div className="skel-c"/><div className="skel-c short"/></div>;
+
   return<div className="app"><Sparkles/>
     <div ref={spotRef}className="spotlight hidden"aria-hidden="true"/>
     <aside aria-label="Navigation">
       <div className="logo"><i aria-hidden="true"><span>S</span><span>A</span></i><div className="t"><div>Säljdashboard</div><small>Stille &amp; Affe</small></div></div>
-      {visibleTabs.map(t=><button key={t.id}className={'nv '+(tab===t.id?'on':'')}onClick={()=>{setTab(t.id);setEdit(null);setMoodSel(null);window.scrollTo({top:0,behavior:'smooth'})}}data-tip={t.label}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
+      {visibleTabs.map(t=><button key={t.id}className={'nv '+(tab===t.id?'on':'')}onClick={()=>{setTab(t.id);setEdit(null);setMoodSel(null);window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}data-tip={t.label}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
       <div className="who"><b>{can?'Stille':'Affe'}</b><span className="role">{can?'Säljare':'Chef'}</span><div className="row"style={{marginTop:8,gap:6}}><button className="b sm ghost"onClick={()=>setSound(s=>!s)}title="Ljud">{sound?'🔊':'🔇'}</button><button type="button"className="b sm ghost"onClick={doLogout}>Logga ut</button></div></div>
     </aside>
     <main ref={mainRef}key={tab}className="tab-wrap">
       <div className="top">
         <span className="chip">{visibleTabs.find(t=>t.id===tab)?.label||'Översikt'}{tab!=='overview'&&<span className="muted"> · {can?'Stille':'Affe'}</span>}<span className="muted"style={{marginLeft:10,opacity:.5}}>⌘K</span><Freshness at={fetchedAt}onRefresh={load}/></span>
+
         <div style={{position:'relative'}}ref={bellRef}>
           <button className="b bellb"onClick={()=>setBell(b=>!b)}aria-label="Notiser">🔔{alerts.length>0&&<i className="dot pulse-ring">{alerts.length}</i>}</button>
           {bell&&<div className="c pop"><div className="k">Notiser</div>{alerts.length?alerts.map(x=><p key={x}className="al">{x}</p>):<p className="s">Allt lugnt 👌</p>}{typeof Notification!=='undefined'&&Notification.permission==='default'&&<button className="b"onClick={()=>{Notification.requestPermission().then(()=>setBell(false))}}>Aktivera notiser</button>}</div>}
@@ -577,39 +676,40 @@ export default function App(){
         <h2>{can?`${greet}, Stille`:'Affes ledningsvy'} <span className="ok">{can?'👋':'◈'}</span></h2>
         <p className="sub">{can?<>{dayName} · <span className="num">{streak} dagar i rad {streak>=3&&<span className="streak-fire">🔥</span>}</span></>:`Stilles resultat · ${dayName} · Skrivskyddad översikt`}</p>
         <Motivation seller={can}/>
-        <Checklist can={can}/>
+        <Checklist can={can}hasToday={!!todayRow}/>
         <Bars3D rows={rows}/>
-        {can&&<SellerExtras rows={rows}g={g}ts={ts}tt={tt}hasToday={!!todayRow}/>}
+        {can&&<SellerExtras rows={rows}g={g}ts={ts}tt={tt}hasToday={!!todayRow}paceReliable={paceReliable}registeredWorkdays={registeredWorkdays}elapsedWorkdays={elapsedWorkdays}remainingWorkdays={remainingWorkdays}sound={sound}/>}
         {!can&&<div className="mo-two"style={{marginBottom:16}}><StreakDots rows={rows}/><WeekdayInsight rows={rows}/></div>}
+
         {can&&<TodayFix sales={ts}tb={tt}has={!!todayRow}onSet={setToday}onClear={clearToday}/>}
-        <Ticker items={[`Idag: ${todayRow?Number(todayRow.sales):0} sälj`,`Månaden: ${ms} sälj`,`TB månaden: ${sv(mt)} kr`,`${streak} dagar i rad 🔥`,can?'Fokus: dagens nästa steg':'Chefsvy · skrivskyddad uppföljning']}/>
-        <CoachPanel role={can?'seller':'manager'} hasData={rows.length>0} needsStepUp={coachNeedsStep} todaySales={ts} dailyGoal={g.daily_sales} monthSales={ms} monthGoal={g.monthly_sales} ahead={ahead} remainingWorkdays={remainingWorkdays} requiredPerDay={requiredPerDay} recentAverage={recentCoachAverage} recentDays={recentCoachRows.length} aiText={can&&autoCoach?coachAi:''} aiBusy={can&&autoCoach&&coachBusy} aiConfigured={ks.configured} onAsk={()=>{setTab('ai');if(ks.configured)ask(can?coachPlanPrompt:`Jag är Affe, chef. Utifrån Stilles faktiska resultat hittills — ${ms} sälj den här månaden, ${ahead<0?`${f1(Math.abs(ahead))} efter`: `${f1(ahead)} före`} månadstakten och ${remainingWorkdays} arbetsdagar kvar — föreslå ett respektfullt sätt att stötta honom och en bra öppen fråga till vår nästa avstämning. Hitta inte på fakta.`)}}/>
+        <Ticker items={[todayRow?`Idag: ${Number(todayRow.sales)} sälj`:'Idag: ej registrerat',mo.length?`${ms} sälj denna månad`:'Månaden: inga registreringar',mo.length?`TB denna månad: ${sv(mt)} kr`:'TB: inga registreringar denna månad',streak?`${streak} dagar i rad 🔥`:'Ingen aktiv säljrutinrad',can?'Fokus: dagens nästa steg':'Chefsvy · skrivskyddad uppföljning']}/>
+        <CoachPanel role={can?'seller':'manager'} hasData={rows.length>0}hasToday={!!todayRow}hasMonthData={monthHasData}paceReliable={paceReliable}registeredWorkdays={registeredWorkdays}elapsedWorkdays={elapsedWorkdays}needsStepUp={coachNeedsStep} todaySales={ts} dailyGoal={g.daily_sales} monthSales={ms} monthGoal={g.monthly_sales} ahead={ahead} remainingWorkdays={remainingWorkdays} requiredPerDay={requiredPerDay} recentAverage={recentCoachAverage} recentDays={recentCoachRows.length} aiText={can&&autoCoach?coachAi:''} aiBusy={can&&autoCoach&&coachBusy} aiConfigured={ks.configured} onAsk={()=>{setTab('ai');if(ks.configured)ask(can?coachPlanPrompt:`Jag är Affe, chef. Utifrån Stilles faktiska registreringar — ${monthHasData?`${ms} registrerade sälj denna månad`:'inga registreringar denna månad'}, ${todayRow?`dagens registrering är ${ts} sälj`:'dagens registrering saknas'}, månadstakt ${paceEvidence}, registreringstäckning ${registeredWorkdays}/${elapsedWorkdays} vardagar, ${remainingWorkdays} arbetsdagar kvar — föreslå ett respektfullt sätt att stötta honom och en bra öppen fråga. Om data saknas, säg det utan att behandla frånvaro som noll. Hitta inte på fakta.`)}}/>
         {!can&&<ManagerReport rows={rows}goal={g}/>}
         {!rows.length?<div className="c empty-state"style={{textAlign:'center',padding:44}}><div className="empty-orbit"aria-hidden="true">{can?'↗':'◌'}</div><h2 style={{marginTop:8}}>{can?'Dags för första registreringen':'Inväntar första registreringen'}</h2><p className="sub">{can?'Logga dagens resultat så får du din första tydliga målbild.':'När Stille registrerar resultat syns tempo, prognos och uppföljning här.'}</p>{can&&<button className="b pri"onClick={()=>setTab('register')}>Registrera dagens siffror</button>}</div>:<>
         <div className="bento">
           <div className="c hero">
-            <Ring p={pctToday}sub={`${ts}/${g.daily_sales}`}size={180}/>
+            <Ring p={pctToday}sub={todayRow?`${ts}/${g.daily_sales}`:'Ej registrerat'}size={180}/>
             <div>
               <div className="k">Idag{todayRow?.mood&&<span className="day-emoji">{MOOD_EMOJI[todayRow.mood]}</span>}</div>
-              <div className="v"style={{fontSize:42}}><CountUp n={ts}/><span className="s"> / {g.daily_sales} sälj</span></div>
+              <div className="v"style={{fontSize:42}}>{todayRow?<CountUp n={ts}/>:<span>–</span>}<span className="s">{todayRow?` / ${g.daily_sales} sälj`:` / ${g.daily_sales} mål · ej registrerat`}</span></div>
               <p style={{margin:'6px 0 16px',color:'var(--mu2)'}}>
-                {ts<g.daily_sales?<>Det behövs <b className="ok">{g.daily_sales-ts} sälj</b> till för att nå målet.</>:<b className="ok">Dagsmålet är nått! 🎉</b>}<br/>
-                TB: <b style={{color:'var(--tx)'}}>{fmtMoney(tt)}</b> av {fmtMoney(g.daily_tb)} ({pct(tt,g.daily_tb)}%).
+                {!todayRow?'Dagens resultat är inte registrerat ännu.':ts<g.daily_sales?<>Det behövs <b className="ok">{g.daily_sales-ts} sälj</b> till för att nå målet.</>:<b className="ok">Dagsmålet är nått! 🎉</b>}<br/>
+                {todayRow?<>TB: <b style={{color:'var(--tx)'}}>{fmtMoney(tt)}</b> av {fmtMoney(g.daily_tb)} ({pct(tt,g.daily_tb)}%).</>:'TB visas när dagens resultat är registrerat.'}
               </p>
-              <div className="row"style={{margin:0}}>{can&&<button className="b pri pulse-ring"onClick={quick}>+1 sälj</button>}{can&&<button className="b"onClick={()=>setTab('register')}>Registrera</button>}<button className="b"onClick={()=>setTab('ai')}>✦ AI-coach</button></div>
+              <div className="row"style={{margin:0}}>{can&&todayRow&&<button className="b pri"onClick={quick}>+1 sälj</button>}{can&&<button className="b"onClick={()=>setTab('register')}>{todayRow?'Registrera':'Registrera dagens siffror'}</button>}<button className="b"onClick={()=>setTab('ai')}>✦ AI-coach</button></div>
             </div>
           </div>
           <div className="c mini">
-            <div className="k">Månadens sälj</div>
-            <div className="v ok"><CountUp n={ms}/></div>
-            <div className="s">mål {fmt(g.monthly_sales)} · {pct(ms,g.monthly_sales)}%</div>
-            <div className="bar"><i style={{width:Math.min(100,pct(ms,g.monthly_sales))+'%'}}/></div>
+            <div className="k">Sälj registrerade denna månad</div>
+            <div className="v ok">{mo.length?<CountUp n={ms}/>:<span>–</span>}</div>
+            <div className="s">{mo.length?`mål ${fmt(g.monthly_sales)} · ${pct(ms,g.monthly_sales)}% · ${registeredWorkdays}/${elapsedWorkdays} vardagar`:'Inga registreringar ännu'}</div>
+            <div className="bar"><i style={{width:(mo.length?Math.min(100,pct(ms,g.monthly_sales)):0)+'%'}}/></div>
           </div>
           <div className="c mini">
-            <div className="k">Månadens TB</div>
-            <div className="v">{fmt(Math.round(mt/1000))}k kr</div>
-            <div className="s">{fmtMoney(mt)} av {fmtMoney(g.monthly_tb)}</div>
-            <div className="bar"><i style={{width:Math.min(100,pct(mt,g.monthly_tb))+'%',background:'linear-gradient(90deg,var(--acc2),var(--g3))'}}/></div>
+            <div className="k">TB registrerat denna månad</div>
+            <div className="v">{mo.length?`${fmt(Math.round(mt/1000))}k kr`:'–'}</div>
+            <div className="s">{mo.length?`${fmtMoney(mt)} av ${fmtMoney(g.monthly_tb)} · ${registeredWorkdays}/${elapsedWorkdays} vardagar`:'Inga registreringar ännu'}</div>
+            <div className="bar"><i style={{width:(mo.length?Math.min(100,pct(mt,g.monthly_tb)):0)+'%',background:'linear-gradient(90deg,var(--acc2),var(--g3))'}}/></div>
           </div>
           <div className="c quote-card">
             <div className="quote-text">"{quote.t}"</div>
@@ -631,24 +731,24 @@ export default function App(){
         <div className="c"style={{marginTop:16}}><div className="k">Senaste 8 veckorna · sälj mot veckomål</div><div className="wk-rings">{wks.map((w,i)=><div key={w.key}className="wk-ring"><Ring p={Math.min(100,Math.round(w.sales/Math.max(g.weekly_sales,1)*100))}sub={`${fmt(w.sales)}/${g.weekly_sales}`}size={110}stroke={10}delay={i*60}/><div className="wk-label">{w.key.slice(5)}</div></div>)}</div></div>
 
         <div className="g">
-          <Stat i={0}k="TB idag"v={fmtMoney(tt)}s={`${fmtMoney(g.daily_tb)} mål · ${pct(tt,g.daily_tb)}%`}bar={pct(tt,g.daily_tb)}icon="💰"/>
-          <Stat i={1}k="Veckans sälj"v={weekW?fmt(weekW.sales):'–'}s={`${fmt(g.weekly_sales)} mål · ${weekP}%`}bar={weekP}icon="📆"trend={weekTrend}/>
-          <Stat i={2}k="Veckans TB"v={weekW?fmtMoney(weekW.tb):'–'}s={`${fmtMoney(g.weekly_tb)} mål · ${pct(weekW?.tb||0,g.weekly_tb)}%`}bar={pct(weekW?.tb||0,g.weekly_tb)}icon="💵"/>
+          <Stat i={0}k="TB idag"v={todayRow?fmtMoney(tt):'–'}s={todayRow?`${fmtMoney(g.daily_tb)} mål · ${pct(tt,g.daily_tb)}%`:'Ej registrerat'}bar={todayRow?pct(tt,g.daily_tb):undefined}icon="💰"/>
+          <Stat i={1}k="Veckans sälj"v={currentWeekRows.length&&weekW?fmt(weekW.sales):'–'}s={currentWeekRows.length?`${fmt(g.weekly_sales)} mål · ${weekP}% · ${currentWeekRows.length} registrerade dagar`:'Ingen registrering hittills'}bar={currentWeekRows.length?weekP:undefined}icon="📆"trend={weekTrend}/>
+          <Stat i={2}k="Veckans TB"v={currentWeekRows.length&&weekW?fmtMoney(weekW.tb):'–'}s={currentWeekRows.length?`${fmtMoney(g.weekly_tb)} mål · ${pct(weekW?.tb||0,g.weekly_tb)}% · ${currentWeekRows.length} registrerade dagar`:'Ingen registrering hittills'}bar={currentWeekRows.length?pct(weekW?.tb||0,g.weekly_tb):undefined}icon="💵"/>
           <Stat i={3}k="Snitt/dag"v={mo.length?f1(ms/mo.length):'–'}s={`${mo.length} dagar`}icon="📅"/>
           <Stat i={4}k="Snitt TB/sälj"v={ms?fmtMoney(mt/ms):'–'}s="denna månad"icon="🏷"/>
           <Stat i={5}k="Streak 🔥"v={streak+' dgr'}s={`bästa ${bStreak}`}c={streak?'ok':''}icon="🔥"/>
-          <Stat i={6}k="Mot plan"v={(ahead>=0?'+':'')+f1(ahead)}s={ahead>=0?'Före plan':'Efter plan'}c={ahead>=0?'ok':'bad'}icon="📊"/>
-          <Stat i={7}k="Prognos"v={proj!=null?fmt(Math.round(proj))+' sälj':'–'}s={proj!=null?proj>=g.monthly_sales?'Når målet':'Under målet':'≥5 dagar'}c={proj!=null?proj>=g.monthly_sales?'ok':'bad':''}icon="🔮"/>
-          <Stat i={8}k="Krävs/dag"v={remainingWorkdays>0?f1(monthlySalesGap/remainingWorkdays):monthlySalesGap?'–':'0'}s={remainingWorkdays>0?`${remainingWorkdays} arbetsdagar kvar`:monthlySalesGap?`${fmt(monthlySalesGap)} sälj kvar · arbetsdagarna slut`:'Månadsmålet nått'}icon="⏳"/>
+          <Stat i={6}k="Mot plan"v={paceReliable?(ahead>=0?'+':'')+f1(ahead):'–'}s={paceReliable?(ahead>=0?'Före plan':'Efter plan'):`Underlag ${registeredWorkdays}/${elapsedWorkdays} vardagar`}c={paceReliable?(ahead>=0?'ok':'bad'):''}icon="📊"/>
+          <Stat i={7}k="Prognos"v={proj!=null?fmt(Math.round(proj))+' sälj':'–'}s={proj!=null?proj>=g.monthly_sales?'Når målet':'Under målet':`Underlag ${registeredWorkdays}/${elapsedWorkdays} vardagar`}c={proj!=null?proj>=g.monthly_sales?'ok':'bad':''}icon="🔮"/>
+          <Stat i={8}k="Krävs/dag"v={!paceReliable?'–':remainingWorkdays>0?f1(monthlySalesGap/remainingWorkdays):monthlySalesGap?'–':'0'}s={!paceReliable?`Underlag ${registeredWorkdays}/${elapsedWorkdays} vardagar`:remainingWorkdays>0?`${remainingWorkdays} arbetsdagar kvar`:monthlySalesGap?`${fmt(monthlySalesGap)} sälj kvar · arbetsdagarna slut`:'Månadsmålet nått'}icon="⏳"/>
           <Stat i={9}k="Sälj/timme"v={sum(hh,'hours')?f1(sum(hh,'sales')/sum(hh,'hours')):'–'}s="när timmar finns"icon="⏱"/>
           {pbd&&<Stat i={10}k="Rekorddag (sälj)"v={pbd.sales}s={pbd.entry_date}icon="🏆"/>}
           {pbt&&<Stat i={11}k="Rekorddag (TB)"v={fmtMoney(pbt.tb_sek)}s={pbt.entry_date}icon="💎"/>}
           <Stat i={12}k="Upplåsta märken"v={unlockedArr.length+'/'+ACHIEVEMENTS.length}s="tryck på 🏅 för att se"icon="🏅"/>
         </div>
 
-        {cmpM&&<div className="c"><div className="k">Jämfört med förra månaden</div><div className="row"style={{marginTop:10,marginBottom:0,gap:30}}>
-          <div><div className="s">Förra: {fmt(cmpM.prev.sales)} sälj</div><div style={{fontSize:22,fontWeight:800}}>{fmt(cmpM.cur.sales)} <span className={'stat-change '+(cmpM.salesDiff>=0?'up':'down')}>{cmpM.salesDiff>=0?'▲':'▼'} {Math.abs(cmpM.salesDiff)} ({cmpM.salesPct>=0?'+':''}{cmpM.salesPct}%)</span></div></div>
-          <div style={{borderLeft:'1px solid var(--bd)',paddingLeft:30}}><div className="s">TB: {fmtMoney(cmpM.prev.tb)}</div><div style={{fontSize:22,fontWeight:800}}>{fmtMoney(cmpM.cur.tb)} <span className={'stat-change '+(cmpM.tbDiff>=0?'up':'down')}>{cmpM.tbDiff>=0?'▲':'▼'} {fmtMoney(Math.abs(cmpM.tbDiff))} ({cmpM.tbPct>=0?'+':''}{cmpM.tbPct}%)</span></div></div>
+        {cmpM&&<div className="c"><div className="k">Månad hittills jämfört med samma period förra månaden</div><div className="s">Registrerade dagar: {cmpM.cur.days} denna period · {cmpM.prev.days} förra perioden</div><div className="row"style={{marginTop:10,marginBottom:0,gap:30}}>
+          <div><div className="s">Förra perioden: {fmt(cmpM.prev.sales)} sälj</div><div style={{fontSize:22,fontWeight:800}}>{fmt(cmpM.cur.sales)} <span className={'stat-change '+(cmpM.salesDiff>=0?'up':'down')}>{cmpM.salesDiff>=0?'▲':'▼'} {Math.abs(cmpM.salesDiff)} {cmpM.salesPct===null?'(procent saknas)':`(${cmpM.salesPct>=0?'+':''}${cmpM.salesPct}%)`}</span></div></div>
+          <div style={{borderLeft:'1px solid var(--bd)',paddingLeft:30}}><div className="s">TB förra perioden: {fmtMoney(cmpM.prev.tb)}</div><div style={{fontSize:22,fontWeight:800}}>{fmtMoney(cmpM.cur.tb)} <span className={'stat-change '+(cmpM.tbDiff>=0?'up':'down')}>{cmpM.tbDiff>=0?'▲':'▼'} {fmtMoney(Math.abs(cmpM.tbDiff))} {cmpM.tbPct===null?'(procent saknas)':`(${cmpM.tbPct>=0?'+':''}${cmpM.tbPct}%)`}</span></div></div>
         </div></div>}
 
         <div className="c"style={{marginTop:16}}><div className="k">Månadskalender</div><Heat rows={rows}goal={g.daily_sales}/></div>
@@ -758,8 +858,8 @@ export default function App(){
         <div className="g">
           <Stat k="Veckans sälj"v={fmt(weekW?.sales||0)}s={`${fmt(g.weekly_sales)} mål · ${weekP}%`}bar={weekP}icon="📆"/>
           <Stat k="Veckans TB"v={fmtMoney(weekW?.tb||0)}s={`${fmtMoney(g.weekly_tb)} mål · ${pct(weekW?.tb||0,g.weekly_tb)}%`}bar={pct(weekW?.tb||0,g.weekly_tb)}icon="💵"/>
-          <Stat k="Sälj kvar (månad)"v={fmt(monthlySalesGap)}s={remainingWorkdays>0?`${f1(monthlySalesGap/remainingWorkdays)} per arbetsdag`:monthlySalesGap?'Arbetsdagarna slut':'Månadsmålet nått'}icon="⏳"/>
-          <Stat k="TB kvar (månad)"v={fmtMoney(monthlyTbGap)}s={remainingWorkdays>0?fmtMoney(monthlyTbGap/remainingWorkdays)+'/arbetsdag':monthlyTbGap?'Arbetsdagarna slut':'Månadsmålet nått'}icon="⌛"/>
+          <Stat k="Sälj kvar (månad)"v={paceReliable?fmt(monthlySalesGap):'–'}s={!paceReliable?`Underlag ${registeredWorkdays}/${elapsedWorkdays} vardagar`:remainingWorkdays>0?`${f1(monthlySalesGap/remainingWorkdays)} per arbetsdag`:monthlySalesGap?'Arbetsdagarna slut':'Månadsmålet nått'}icon="⏳"/>
+          <Stat k="TB kvar (månad)"v={paceReliable?fmtMoney(monthlyTbGap):'–'}s={!paceReliable?`Underlag ${registeredWorkdays}/${elapsedWorkdays} vardagar`:remainingWorkdays>0?fmtMoney(monthlyTbGap/remainingWorkdays)+'/arbetsdag':monthlyTbGap?'Arbetsdagarna slut':'Månadsmålet nått'}icon="⌛"/>
         </div>
       </>}
 
@@ -794,7 +894,7 @@ export default function App(){
         <div className="c"style={{maxWidth:580}}><div className="k">Om & genvägar</div><div className="s"style={{marginTop:8,lineHeight:1.9}}>Säljdashboard v7 · Next.js 15 · Supabase · HMAC-sessioner · Rollanpassad chefsöversikt, daglig AI-coach, måltempo, historik och statistik.<br/><b>⌘/Ctrl + K</b> – kommandopalett<br/><b>Rätta dagens siffror</b> i rutan på översikten för snabb ökning.</div><div className="row"style={{marginTop:10,marginBottom:0}}><button className="b ghost"onClick={()=>window.open('/api/health','_blank')}>Hälsokontroll</button><button className="b danger"onClick={doLogout}>Logga ut</button></div></div>
       </>}
 
-      <NetStatus/><ScrollPill/>
+      <NetStatus onReconnect={load}/><ScrollPill/>
       <button className="b logout-fix"onClick={doLogout}aria-label="Logga ut">⎋ Logga ut</button>
       {toast&&<div className="toast"role="status">{toast}</div>}
       {cmd&&<div className="cmd-pal"onClick={()=>setCmd(false)}><div className="cmd-card"onClick={e=>e.stopPropagation()}><input autoFocus className="cmd-input"placeholder="Gå någonstans eller gör en åtgärd…"value={cmdQ}onChange={e=>{setCmdQ(e.target.value);setCmdI(0)}}onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setCmdI(i=>Math.min(i+1,cmds.length-1))}else if(e.key==='ArrowUp'){e.preventDefault();setCmdI(i=>Math.max(i-1,0))}else if(e.key==='Enter'){e.preventDefault();if(cmds[cmdI])cmdAction(cmds[cmdI].fn)}}}/><div className="cmd-list">{cmds.map((c,i)=><div key={c.label}className={'cmd-item '+(i===cmdI?'on':'')}onMouseEnter={()=>setCmdI(i)}onClick={()=>cmdAction(c.fn)}><span>{c.icon}</span><span>{c.label}</span>{!c.k&&<span className="cmd-kbd">↵</span>}</div>)}

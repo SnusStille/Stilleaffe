@@ -10,6 +10,7 @@ function isOpen(p: string): boolean {
     p === '/favicon.ico' ||
     p.startsWith('/_next/') ||
     p.startsWith('/icon') ||
+    p === '/wallstreet-inspiration.webp' ||
     p.startsWith('/manifest')
   );
 }
@@ -45,6 +46,7 @@ export async function middleware(req: NextRequest) {
     if (isOpen(p)) {
       const h = new Headers(req.headers);
       if (ok) h.set('x-role', loggedInRole);
+      else h.delete('x-role'); // Never pass through a client-supplied role header to open routes.
       return NextResponse.next({ request: { headers: h } });
     }
 

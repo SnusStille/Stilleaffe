@@ -24,9 +24,12 @@ Använd Node.js 22.x.
 
 ## Senaste förbättringar
 
-- Tydlig, rollanpassad översikt: Stille får dagens mål och nästa steg; Affe får en skrivskyddad chefsbild med veckomål och jämförelse mot motsvarande dagar föregående vecka.
-- Säljaren kan få högst en automatiserad, datagrundad AI-nudge per lokal dag när månadstakten eller dagens resultat halkar efter. Den kan stängas av i Inställningar; utan AI finns fortfarande deterministiska tempo- och målråd.
+- Ny v19-inloggning med split-screen-layout, original Wall-Street-inspirerad hero-bild, tydligare rollkort och tillgängliga formulär-/laddningstillstånd. Se `LOGIN-REDESIGN.md`.
+- Tydlig, rollanpassad översikt: Stille får dagens mål och nästa steg; Affe får en skrivskyddad chefsbild med veckomål och trend endast på jämförbara registrerade vardagar.
+- Saknade registreringar visas separat från faktiska nollor. Månadssammanfattningen jämför samma hittillsvarande kalenderperiod och visar registrerade dagar.
+- Säljaren kan få högst en automatiserad, datagrundad AI-nudge per lokal dag när månadstakten eller dagens resultat halkar efter. Den kan stängas av i Inställningar; saknade rader behandlas inte som noll, och verktyg skickar bara förslag som användaren själv godkänner.
 - Databasfel har tydligare åtgärder: försök igen och öppna `/api/health`.
+- Se `FEATURE-REVIEW.md` för prioritering av tolv funktioner, omfattning och uppskattad insats.
 - Frontend beroenden är uppdaterade till Next.js 15.5.27 och PostCSS 8.5.29; kör `npm run build` före deploy.
 
 ## Deploya till Vercel
