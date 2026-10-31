@@ -257,6 +257,11 @@ export default function Login() {
             )}
           </form>
 
+          <details className="auth-recovery">
+            <summary>Kan du inte logga in?</summary>
+            <p>Det finns ingen automatisk återställningslänk och ett befintligt lösenord kan inte visas. Kontakta {role === 'seller' ? 'Affe' : 'Stille'} för hjälp med en säker återställning.</p>
+          </details>
+
           <div className="auth-divider"><span>BEHÖRIG ÅTKOMST</span></div>
           <div className="auth-security">
             <span className="auth-security-icon" aria-hidden="true">

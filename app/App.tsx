@@ -10,6 +10,7 @@ import {
   sum, today, weekKey, weekSales, workdaysElapsed, workdaysLeft, workdaysTotal,
   compareMonths, fmt, fmtMoney, f1, quoteOfDay,
 } from '@/lib/calc';
+import { splitMobileNavigation } from '@/lib/mobile-navigation';
 
 type TabId = 'mission'|'review'|'overview'|'register'|'history'|'stats'|'year'|'goals'|'comments'|'ai'|'settings'|'achievements';
 const TABS:{id:TabId;label:string;ic:string}[]=[
@@ -18,6 +19,7 @@ const TABS:{id:TabId;label:string;ic:string}[]=[
   {id:'year',label:'Årsvy',ic:'▤'},{id:'goals',label:'Mål',ic:'◎'},
   {id:'achievements',label:'Achievements',ic:'🏅'},{id:'comments',label:'Kommentarer',ic:'✎'},{id:'ai',label:'AI Sales Analyst',ic:'✦'},
   {id:'settings',label:'Inställningar',ic:'⚙'}];
+const MOBILE_LABELS: Partial<Record<TabId, string>> = { mission: 'Mission', register: 'Registrera', review: 'Review', overview: 'Översikt', comments: 'Snack' };
 
 type Prop={id:string;tool:string;input:any;done?:boolean};
 type Msg={r:'u'|'a';t:string;e?:boolean;props?:Prop[]};
@@ -571,7 +573,7 @@ function Intro({name}:{name:string}){
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
-  const[tab,setTab]=useState<TabId>('mission');const[edit,setEdit]=useState<number|null>(null);const[registerDate,setRegisterDate]=useState('');
+  const[tab,setTab]=useState<TabId>('mission');const[mobileMoreOpen,setMobileMoreOpen]=useState(false);const[edit,setEdit]=useState<number|null>(null);const[registerDate,setRegisterDate]=useState('');
   const[toast,setToast]=useState('');const[loading,setLoading]=useState(true);const[fetchedAt,setFetchedAt]=useState(0);const[showAffeTease,setShowAffeTease]=useState(false);
 
   const[rg,setRg]=useState<'Idag'|'Denna vecka'|'Denna månad'|'Föregående månad'|'Detta år'|'Allt'>('Denna månad');
@@ -581,7 +583,11 @@ export default function App(){
   const coachRequestKey=useRef('');
   const can=role==='seller';
   const visibleTabs=can?TABS:TABS.filter(t=>t.id!=='register');
+  const {primary:mobilePrimaryTabs,more:mobileMoreTabs}=splitMobileNavigation(visibleTabs,can?'seller':'manager');
+  const navigateTo=(id:TabId)=>{setTab(id);setEdit(null);setMoodSel(null);setMobileMoreOpen(false);if(id==='register')setRegisterDate('');window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})};
   useEffect(()=>{document.documentElement.dataset.role=role},[role]);
+  useEffect(()=>{setMobileMoreOpen(false)},[tab]);
+  useEffect(()=>{if(!mobileMoreOpen)return;const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')setMobileMoreOpen(false)};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[mobileMoreOpen]);
   useEffect(()=>{if(role!=='manager'||loading)return;setShowAffeTease(true);const timer=window.setTimeout(()=>setShowAffeTease(false),10_000);return()=>window.clearTimeout(timer)},[role,loading]);
   const[cm,setCm]=useState<CItem[]>([]);const[unread,setUnread]=useState(0);
   const[cText,setCText]=useState('');const[cDate,setCDate]=useState('');
@@ -774,7 +780,17 @@ export default function App(){
     <div ref={spotRef}className="spotlight hidden"aria-hidden="true"/>
     <aside aria-label="Navigation">
       <div className="logo"><i aria-hidden="true"><span>S</span><span>A</span></i><div className="t"><div>Säljdashboard</div><small>Stille &amp; Affe</small></div></div>
-      {visibleTabs.map(t=><button key={t.id}className={'nv '+(tab===t.id?'on':'')}onClick={()=>{setTab(t.id);setEdit(null);setMoodSel(null);if(t.id==='register')setRegisterDate('');window.scrollTo({top:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}data-tip={t.label}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
+      <nav className="desktop-nav" aria-label="Alla avsnitt">
+        {visibleTabs.map(t=><button key={t.id}type="button"className={'nv desktop-tab '+(tab===t.id?'on':'')}onClick={()=>navigateTo(t.id)}data-tip={t.label}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
+      </nav>
+      <nav className="mobile-nav" aria-label="Snabbnavigering">
+        {mobilePrimaryTabs.map(t=><button key={t.id}type="button"className={'nv mobile-tab '+(tab===t.id?'on':'')}onClick={()=>navigateTo(t.id)}title={t.label}aria-label={t.label}aria-current={tab===t.id?'page':undefined}><span className="ic"aria-hidden="true">{t.ic}</span><span className="nav-label">{MOBILE_LABELS[t.id]||t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}{t.id==='achievements'&&unlockedArr.length>0&&<span className="dot-mini"style={{background:'var(--am)'}}>{unlockedArr.length}</span>}</button>)}
+        <button type="button"className={'nv mobile-more '+(mobileMoreTabs.some(t=>t.id===tab)||mobileMoreOpen?'on':'')}onClick={()=>setMobileMoreOpen(v=>!v)}aria-expanded={mobileMoreOpen}aria-controls="mobile-more-panel"aria-label="Fler avsnitt"title="Fler avsnitt"><span className="ic"aria-hidden="true">···</span><span className="nav-label">Mer</span></button>
+        <div className="mobile-more-panel"id="mobile-more-panel"aria-label="Fler avsnitt"hidden={!mobileMoreOpen}>
+          <div className="mobile-more-head"><strong>Fler avsnitt</strong><button type="button"onClick={()=>setMobileMoreOpen(false)}aria-label="Stäng menyn">×</button></div>
+          <div className="mobile-more-grid">{mobileMoreTabs.map(t=><button key={t.id}type="button"className={'mobile-more-item '+(tab===t.id?'on':'')}onClick={()=>navigateTo(t.id)}aria-current={tab===t.id?'page':undefined}><span className="ic"aria-hidden="true">{t.ic}</span><span>{t.label}</span>{t.id==='comments'&&unread>0&&<em className="dot-mini">{unread}</em>}</button>)}</div>
+        </div>
+      </nav>
       <div className="ekg"aria-hidden="true"><span>LIVE</span><svg viewBox="0 0 120 28"preserveAspectRatio="none"><path pathLength={140}d="M0,14 L22,14 L28,14 L32,4 L38,24 L44,10 L50,14 L72,14 L78,14 L82,6 L88,22 L94,12 L100,14 L120,14"/></svg></div>
       <div className="who"><b>{can?'Stille':'Affe'}</b><span className="role">{can?'Säljare':'Chef'}</span><div className="row"style={{marginTop:8,gap:6}}><button className="b sm ghost"onClick={()=>setSound(s=>!s)}title="Ljud">{sound?'🔊':'🔇'}</button><button type="button"className="b sm ghost"onClick={doLogout}>Logga ut</button></div></div>
     </aside>

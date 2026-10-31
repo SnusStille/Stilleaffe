@@ -18,6 +18,7 @@ import './design-v25.css';
 import './design-v26.css';
 import './design-v27.css';
 import './mission-control.css';
+import './mobile-navigation.css';
 import FocusMode from './FocusMode';
 import Fx from './Fx';
 import FloorBg from './FloorBg';

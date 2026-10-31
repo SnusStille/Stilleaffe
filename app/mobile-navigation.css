@@ -1,0 +1,222 @@
+/* Mobile-first tab bar: five clear destinations, with every secondary section one tap away. */
+.desktop-nav {
+  display: grid;
+  gap: 2px;
+}
+.mobile-nav {
+  display: none;
+}
+
+.auth-recovery {
+  margin-top: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 11px;
+  background: rgba(255,255,255,.025);
+  color: #aab3bc;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.auth-recovery summary {
+  min-height: 42px;
+  padding: 11px 13px;
+  color: #c4ccd4;
+  cursor: pointer;
+  font-weight: 650;
+}
+.auth-recovery summary:hover { color: #f1f4f6; }
+.auth-recovery summary:focus-visible {
+  outline: 2px solid var(--auth-accent);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+.auth-recovery p { margin: 0; padding: 0 13px 13px; color: #8b96a1; }
+
+@media (max-width: 820px) {
+  .app > aside {
+    position: fixed !important;
+    top: auto !important;
+    right: 10px !important;
+    bottom: 8px !important;
+    left: 10px !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0;
+    margin: 0 !important;
+    padding: 7px 7px calc(7px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow: visible !important;
+    border: 1px solid color-mix(in srgb, var(--gr) 18%, var(--bd2)) !important;
+    border-radius: 17px !important;
+    background: rgba(9,13,17,.96) !important;
+    box-shadow: 0 14px 38px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.055) !important;
+    backdrop-filter: blur(22px);
+    z-index: 100 !important;
+  }
+  .app > aside > .logo,
+  .app > aside > .desktop-nav,
+  .app > aside > .ekg,
+  .app > aside > .who { display: none !important; }
+  .app > aside > .mobile-nav {
+    position: relative;
+    display: grid !important;
+    width: 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 3px;
+  }
+  .app > aside .mobile-nav > button.nv {
+    position: relative;
+    display: flex !important;
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 54px;
+    flex: initial !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin: 0;
+    padding: 4px 1px;
+    overflow: visible;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--mu);
+    opacity: 1;
+    transform: none !important;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app > aside .mobile-nav > button.nv:hover {
+    background: color-mix(in srgb, var(--gr) 7%, transparent);
+    color: var(--tx);
+  }
+  .app > aside .mobile-nav > button.nv.on {
+    border-color: color-mix(in srgb, var(--gr) 20%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--gr) 12%, #101419), color-mix(in srgb, var(--gr) 5%, #0c1014));
+    color: var(--gr);
+  }
+  .app > aside .mobile-nav > button.nv.on::after { display: none !important; }
+  .app > aside .mobile-nav .ic {
+    display: block;
+    width: auto;
+    font-size: 18px;
+    line-height: 1.1;
+    transform: none;
+    text-shadow: 0 2px 8px color-mix(in srgb, var(--gr) 25%, transparent);
+  }
+  .app > aside .mobile-nav .nav-label {
+    display: block !important;
+    max-width: 100%;
+    overflow: hidden;
+    color: inherit;
+    font-size: 9px;
+    font-weight: 650;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app > aside .mobile-nav .dot-mini {
+    top: 0;
+    right: 4px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    font-size: 9px;
+  }
+  .app > aside .mobile-nav > button:focus-visible,
+  .mobile-more-item:focus-visible,
+  .mobile-more-head button:focus-visible {
+    outline: 2px solid var(--gr);
+    outline-offset: 2px;
+  }
+  .mobile-more-panel {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 10px);
+    left: 0;
+    z-index: 4;
+    max-height: min(58dvh, 470px);
+    overflow: auto;
+    padding: 13px;
+    border: 1px solid var(--bd2);
+    border-radius: 18px;
+    background: rgba(10,14,18,.98);
+    box-shadow: 0 24px 70px rgba(0,0,0,.64), inset 0 1px 0 rgba(255,255,255,.055);
+    backdrop-filter: blur(24px);
+    overscroll-behavior: contain;
+    animation: mobile-menu-in .18s ease-out both;
+  }
+  .mobile-more-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 0 2px 9px;
+    border-bottom: 1px solid var(--bd);
+    color: var(--tx);
+    font-size: 12px;
+    letter-spacing: .04em;
+  }
+  .mobile-more-head button {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 1px solid var(--bd);
+    border-radius: 9px;
+    background: rgba(255,255,255,.04);
+    color: var(--mu2);
+    font-size: 22px;
+    cursor: pointer;
+  }
+  .mobile-more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .mobile-more-item {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border: 1px solid var(--bd);
+    border-radius: 11px;
+    background: rgba(255,255,255,.025);
+    color: var(--mu2);
+    text-align: left;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, color .15s ease;
+  }
+  .mobile-more-item:hover,
+  .mobile-more-item.on {
+    border-color: color-mix(in srgb, var(--gr) 35%, var(--bd));
+    background: color-mix(in srgb, var(--gr) 9%, #101419);
+    color: var(--tx);
+  }
+  .mobile-more-item.on .ic { color: var(--gr); }
+  .mobile-more-item .ic { flex: 0 0 20px; font-size: 15px; text-align: center; }
+  .app main { padding-bottom: calc(126px + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (max-width: 380px) {
+  .app > aside { right: 7px !important; left: 7px !important; }
+  .app > aside .mobile-nav > button.nv { min-height: 51px; }
+  .app > aside .mobile-nav .nav-label { font-size: 8px; }
+  .mobile-more-panel { padding: 10px; }
+  .mobile-more-item { gap: 6px; padding: 7px; font-size: 10px; }
+}
+
+@media (min-width: 821px) {
+  .mobile-nav { display: none !important; }
+}
+
+@keyframes mobile-menu-in {
+  from { opacity: 0; transform: translateY(7px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-more-panel { animation: none; }
+}
