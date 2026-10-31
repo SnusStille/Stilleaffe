@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { Row, fmt, fmtMoney, f1, today } from '@/lib/calc';
+import PaceMap from './PaceMap';
 
 type MissionControlProps = {
   rows: Row[];
   onOpenAi: (question: string) => void;
   aiEnabled: boolean;
+  canRegister: boolean;
+  onRegister: (date: string) => void;
 };
 
 type Tier = { id: string; label: string; value: number; tone: string };
@@ -36,7 +39,7 @@ function dateKeysForMonth(key: string) {
   return Array.from({ length: days }, (_, i) => `${key}-${String(i + 1).padStart(2, '0')}`);
 }
 
-export default function MissionControl({ rows, onOpenAi, aiEnabled }: MissionControlProps) {
+export default function MissionControl({ rows, onOpenAi, aiEnabled, canRegister, onRegister }: MissionControlProps) {
   const now = today();
   const currentMonth = now.slice(0, 7);
   // Ahead of November, open the November plan by default; the month picker keeps October available.
@@ -198,6 +201,8 @@ export default function MissionControl({ rows, onOpenAi, aiEnabled }: MissionCon
         <div><span>REGISTRERINGSTÄCKNING</span><b>{data.targetIsFuture ? 'Kommande period' : `${data.registeredDays}/${data.elapsed} vardagar`}</b></div>
       </div>
     </section>
+
+    <PaceMap month={month} rows={rows} asOf={now} canRegister={canRegister} onRegister={onRegister}/>
 
     <div className="mission-grid">
       <section className="c mission-plan">

@@ -10,7 +10,7 @@
 
 ## Implemented
 
-- **Mission Control:** default view with fixed 60k / 80k / 100k TB tiers, period picker, November-first planning during the final week of October, live workday counts, daily pace, pressure status, evidence coverage and gated forecast.
+- **Mission Control:** default view with fixed 60k / 80k / 100k TB tiers, period picker, November-first planning during the final week of October, live workday counts, daily pace, pressure status, evidence coverage and gated forecast. The cumulative Pace Map compares registered TB with the three linear target paces; unregistered weekdays break the actual line and are never plotted as zero.
 - **What If:** interactive client-side simulation only; it never calls the write API or changes Supabase.
 - **Personal Best Hunter:** prior day-sales, day-TB and weekly sales/TB records, TB per sale and best full-month TB, computed from existing rows.
 - **Achievement Archive:** existing real achievement conditions reused, made navigable, with Bronze / Silver / Gold / Predator / Legend rank thresholds.
@@ -47,7 +47,7 @@ Required configuration is not present in this checkout, so Resend domain verific
 
 ## Checks
 
-- `npm test` — nine deterministic tests covering missing versus zero entries, date bounds, coverage-gated forecasts, per-day pacing, historical fallback labels, HTML escaping, Stockholm CET/CEST conversion, daily retry windows, and DST idempotency.
+- `npm test` — twelve deterministic tests covering missing versus zero entries, date bounds, coverage-gated forecasts, per-day pacing, historical fallback labels, HTML escaping, Pace Map gap semantics, target pace across weekends, Stockholm CET/CEST conversion, daily retry windows, and DST idempotency.
 - `npx tsc --noEmit`
 - `npm run build`
 - `npm audit`
