@@ -77,7 +77,7 @@ export default function MorningBriefingSettings() {
       <label><span>Utskickstid · svensk tid</span><select value="07:00" disabled aria-label="Utskickstid låst till 07:00 Europe/Stockholm"><option value="07:00">07:00 · Europe/Stockholm</option></select></label>
       <button type="submit" className="b" disabled={!!busy || loading}>{busy === 'save' ? 'Sparar…' : 'Spara mottagare'}</button>
     </form>
-    <p className="morning-hint">Vercel Hobby tillåter endast dagliga Cron-körningar. Tre dagliga UTC-kontroller hanterar CET/CEST och säkra retries; rapporten skickas endast när klockan är 07:00 i Stockholm. En annan utskickstid kräver ändrad schemakonfiguration eller Pro-plan.</p>
+    <p className="morning-hint">Vercel Hobby tillåter endast dagliga Cron-körningar. Fyra dagliga UTC-kontroller hanterar CET/CEST och säkra retries; rapporten skickas endast när klockan är 07:00 i Stockholm. En annan utskickstid kräver ändrad schemakonfiguration eller Pro-plan.</p>
 
     <div className="morning-actions">
       <button type="button" className="b pri" disabled={!!busy || !readyToTest} onClick={() => void post('test')}>{busy === 'test' ? 'Skickar test…' : 'Skicka test till båda'}</button>
