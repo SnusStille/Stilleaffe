@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Row, fmt, fmtMoney, f1, today } from '@/lib/calc';
 import PaceMap from './PaceMap';
+import { buildAdaptivePlan } from '@/lib/adaptive-plan';
 
 type MissionControlProps = {
   rows: Row[];
@@ -82,6 +83,8 @@ export default function MissionControl({ rows, onOpenAi, aiEnabled, canRegister,
     const hunterTodayRow = rows.find((r) => r.entry_date === now);
     const todayRow = month === now.slice(0, 7) ? hunterTodayRow : undefined;
     const planDaysRemaining = Math.max(0, remaining - (todayRow && weekday(now) ? 1 : 0));
+    const planDates = workdays.filter((date) => date >= now && !(todayRow && date === now));
+    const historicalRows = rows.filter((row) => row.entry_date < first);
     const currentWeek = mondayKey(now);
     const thisWeekRows = rows.filter((r) => mondayKey(r.entry_date) === currentWeek);
     const weekSales = thisWeekRows.reduce((n, r) => n + Number(r.sales), 0);
@@ -123,7 +126,7 @@ export default function MissionControl({ rows, onOpenAi, aiEnabled, canRegister,
     const enoughForForecast = !targetIsFuture && !targetIsPast && elapsed > 0 && registeredDays >= Math.min(3, elapsed) && completeness >= 0.7;
     const projection = targetIsPast ? monthTb : enoughForForecast && registeredDays > 0 ? monthTb / registeredDays * workdays.length : null;
     return {
-      monthRows, monthTb, monthSales, workdays: workdays.length, elapsed, remaining, planDaysRemaining,
+      monthRows, monthTb, monthSales, workdays: workdays.length, elapsed, remaining, planDaysRemaining, planDates, historicalRows,
       registeredDays, completeness, avgTbPerSale, avgTbPerSaleBasis, todayRow, hunterTodayRow, weekSales, weekTb, currentWeekComplete,
       bestWeek, bestWeekTb, bestDay, bestTbDay, bestTbPerSale, bestMonth, projection,
       targetIsFuture, targetIsPast,
@@ -132,8 +135,18 @@ export default function MissionControl({ rows, onOpenAi, aiEnabled, canRegister,
 
   const tier = TIERS.find((item) => item.id === tierId) || TIERS[1];
   const gap = Math.max(0, tier.value - data.monthTb);
-  const perWorkday = data.planDaysRemaining > 0 ? gap / data.planDaysRemaining : 0;
-  const salesNeededToday = data.avgTbPerSale > 0 ? Math.ceil(perWorkday / data.avgTbPerSale) : null;
+  const nextTier = TIERS.find((item) => item.value > data.monthTb) || null;
+  const planTier = data.monthTb < tier.value ? tier : nextTier;
+  const planGap = planTier ? Math.max(0, planTier.value - data.monthTb) : 0;
+  const perWorkday = data.planDaysRemaining > 0 ? planGap / data.planDaysRemaining : 0;
+  const adaptivePlan = buildAdaptivePlan(planGap, data.planDates, data.historicalRows);
+  const nextWorkday = adaptivePlan.targets[0] || null;
+  const nextDayTbTarget = nextWorkday?.targetTb ?? perWorkday;
+  const nextDayLabel = nextWorkday ? new Date(`${nextWorkday.date}T12:00:00`).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'short' }) : null;
+  const salesNeededNextDay = data.avgTbPerSale > 0 ? Math.ceil(nextDayTbTarget / data.avgTbPerSale) : null;
+  const adaptiveBasisLabel = adaptivePlan.basis === 'weekday-history'
+    ? `Fördelat efter ${adaptivePlan.historySampleDays} tidigare registrerade vardagar.`
+    : 'Jämnt fördelat eftersom veckodagshistoriken är för tunn.';
   const idealToDate = data.workdays ? tier.value * data.elapsed / data.workdays : 0;
   const paceGap = data.monthTb - idealToDate;
   const requiredRatio = data.planDaysRemaining > 0 && tier.value > data.monthTb
@@ -153,7 +166,6 @@ export default function MissionControl({ rows, onOpenAi, aiEnabled, canRegister,
   const simulatedWorkdays = data.planDaysRemaining + extraDays;
   const simulatedOutcome = data.monthTb + simulatedWorkdays * scenarioSales * scenarioTb + finalWeek;
   const activeTier = [...TIERS].reverse().find((item) => data.monthTb >= item.value)?.id || null;
-  const nextTier = TIERS.find((item) => item.value > data.monthTb) || null;
   const recordDaySalesGap = data.bestDay && data.hunterTodayRow ? Math.max(0, data.bestDay.sales + 1 - data.hunterTodayRow.sales) : null;
   const recordDayTbGap = data.bestTbDay && data.hunterTodayRow ? Math.max(0, data.bestTbDay.tb_sek + 1 - data.hunterTodayRow.tb_sek) : null;
   const meterProgress = data.targetIsFuture || data.targetIsPast || data.planDaysRemaining === 0 || gap === 0
@@ -208,21 +220,21 @@ export default function MissionControl({ rows, onOpenAi, aiEnabled, canRegister,
       <section className="c mission-plan">
         <div className="mission-section-top"><div><div className="mission-eyebrow">DAILY BATTLE PLAN</div><h2>{data.targetIsFuture ? 'Startplan' : 'Dagens takt'}</h2></div><span className="mission-section-icon">↗</span></div>
         {<>
-            <div className="mission-daily-number"><strong>{data.planDaysRemaining > 0 ? fmtMoney(perWorkday) : '—'}</strong><span>TB per arbetsdag för {tier.label}</span></div>
+            <div className="mission-daily-number"><strong>{data.planDaysRemaining > 0 ? fmtMoney(nextDayTbTarget) : '—'}</strong><span>{nextDayLabel ? `Personligt riktmärke · ${nextDayLabel} · ${planTier?.label || 'Mål nådda'}` : `TB per arbetsdag för ${planTier?.label || tier.label}`}</span></div>
             <div className="mission-plan-grid">
-              <div><span>FÖRSÄLJNINGAR / DAG</span><b>{data.targetIsPast || data.remaining === 0 ? '—' : salesNeededToday == null ? 'Saknar TB-snitt' : `≈ ${fmt(salesNeededToday)}`}</b></div>
+              <div><span>SÄLJ / NÄSTA DAG</span><b>{data.targetIsPast || data.planDaysRemaining === 0 ? '—' : salesNeededNextDay == null ? 'Saknar TB-snitt' : `≈ ${fmt(salesNeededNextDay)}`}</b></div>
               <div><span>{data.avgTbPerSaleBasis === 'history' ? 'TB / SÄLJ · HISTORIK' : 'TB / FÖRSÄLJNING'}</span><b>{observedAvg == null ? 'Saknar underlag' : fmtMoney(observedAvg)}</b></div>
               <div><span>MOT JÄMN PLAN</span><b className={paceGap >= 0 ? 'mission-positive' : 'mission-negative'}>{paceGap >= 0 ? '+' : '−'}{fmtMoney(Math.abs(paceGap))}</b></div>
               <div><span>DAGENS REGISTRERING</span><b>{data.targetIsFuture ? 'Perioden har inte startat' : data.todayRow ? `${fmtMoney(data.todayRow.tb_sek)} · ${data.todayRow.sales} sälj` : 'Saknas — ej noll'}</b></div>
             </div>
             <p className="mission-recommendation">
-              {data.targetIsFuture ? `Startplan: ${fmtMoney(perWorkday)} TB per arbetsdag under ${data.remaining} arbetsdagar${salesNeededToday == null ? '.' : ` (cirka ${fmt(salesNeededToday)} försäljningar per dag vid historiskt snitt).`}`
+              {data.targetIsFuture ? `Startplan: jämnt snitt ${fmtMoney(perWorkday)} TB per produktionsdag. Första dagen (${nextDayLabel}): ${fmtMoney(nextDayTbTarget)} TB${salesNeededNextDay == null ? '' : `, cirka ${fmt(salesNeededNextDay)} avslut vid historiskt TB-snitt`}. ${adaptiveBasisLabel}`
                 : data.targetIsPast ? 'Månaden är avslutad. Slutresultatet jämförs ovan.'
                 : gap <= 0 ? `Målet ${tier.label} är nått. ${nextTier ? `Nästa nivå är ${nextTier.label}: ${fmtMoney(nextTier.value - data.monthTb)} kvar.` : 'Alla tre nivåer är passerade.'}`
                   : data.planDaysRemaining === 0 ? `${fmtMoney(gap)} saknas, men inga arbetsdagar återstår för ny produktion i den valda månaden.`
-                    : `För att nå ${tier.label}: sikta på ${fmtMoney(perWorkday)} TB per återstående produktionsdag${salesNeededToday == null ? '.' : `, cirka ${fmt(salesNeededToday)} avslut per dag vid ditt ${data.avgTbPerSaleBasis === 'history' ? 'historiska' : 'registrerade'} TB-snitt.`}${data.todayRow ? ` Dagens registrering är redan medräknad (${fmtMoney(data.todayRow.tb_sek)} TB).` : ''}`}
+                    : `För att nå ${tier.label}: jämnt snitt ${fmtMoney(perWorkday)} TB per återstående produktionsdag. Nästa arbetsdag${nextDayLabel ? ` (${nextDayLabel})` : ''}: ${fmtMoney(nextDayTbTarget)} TB${salesNeededNextDay == null ? '' : `, cirka ${fmt(salesNeededNextDay)} avslut vid ditt ${data.avgTbPerSaleBasis === 'history' ? 'historiska' : 'registrerade'} TB-snitt`}. ${adaptiveBasisLabel}${data.todayRow ? ` Dagens registrering är redan medräknad (${fmtMoney(data.todayRow.tb_sek)} TB).` : ''}`}
             </p>
-            <div className="mission-plan-meta"><span>{data.targetIsFuture ? 'STARTSTATUS' : 'PLANSTATUS'}</span><b className={`mission-status-text pressure-text-${pressure.toLowerCase().replaceAll(' ', '-')}`}>{pressure}</b><span>{data.targetIsFuture ? `Riktmärke: ${fmtMoney(perWorkday)} per arbetsdag.` : `${paceGap >= 0 ? 'Över' : 'Under'} jämn plan med ${fmtMoney(Math.abs(paceGap))}`}</span></div>
+            <div className="mission-plan-meta"><span>{data.targetIsFuture ? 'STARTSTATUS' : 'PLANSTATUS'}</span><b className={`mission-status-text pressure-text-${pressure.toLowerCase().replaceAll(' ', '-')}`}>{pressure}</b><span>{adaptiveBasisLabel} {data.targetIsFuture ? `Jämnt snitt: ${fmtMoney(perWorkday)} per dag.` : `${paceGap >= 0 ? 'Över' : 'Under'} jämn plan med ${fmtMoney(Math.abs(paceGap))}`}</span></div>
           </>}
       </section>
 
