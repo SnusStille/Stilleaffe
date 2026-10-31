@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       const affe = normalizeEmail(body.affe);
       const time = String(body.time || '');
       if (!validEmail(oliver) || !validEmail(affe) || oliver === affe) return fail('Ange två olika, giltiga mottagaradresser.');
-      if (!/^([01]\d|2[0-3]):00$/.test(time)) return fail('Välj en hel timme mellan 00:00 och 23:00.');
+      if (time !== '07:00') return fail('På Vercel Hobby är utskicket låst till 07:00 Europe/Stockholm. Övriga tider kräver ändrad Cron-konfiguration eller Pro-plan.');
       const current = await readMorningSettings();
       const recipientChanged = recipientsFingerprint(oliver, affe) !== recipientsFingerprint(current.oliver, current.affe);
       const enabled = recipientChanged ? false : current.enabled;

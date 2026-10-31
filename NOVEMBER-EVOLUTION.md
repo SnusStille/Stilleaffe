@@ -16,7 +16,7 @@
 - **Achievement Archive:** existing real achievement conditions reused, made navigable, with Bronze / Silver / Gold / Predator / Legend rank thresholds.
 - **AI Sales Analyst:** example questions and real five-year Supabase context. No new AI provider or schema for analytics.
 - **Monthly Review / Autopsy:** month selector, fixed target comparison, actual weekly totals, weekday averages, first/second-half split, best days and prior-month actuals. Missing-date coverage is surfaced. AI analysis is optional and fed the selected period's actual metrics.
-- **Morning Sales Briefing:** dark responsive HTML and text report; server-side Resend send; seller-only recipient/time settings; Resend-domain check; manual preview and test; daily delivery history; idempotent daily claim; up to three total attempts with safe retries (including across midnight); and a Vercel Cron route that checks `Europe/Stockholm` time regardless of server UTC. A daily report is sent even without a sales row; missing remains distinct from a recorded zero.
+- **Morning Sales Briefing:** dark responsive HTML and text report; server-side Resend send; seller-only recipient settings; Resend-domain check; manual preview and test; daily delivery history; idempotent daily claim; and a Hobby-compatible Vercel Cron schedule. The 07:00 Stockholm send time is fixed on Hobby; three once-daily UTC invocations cover CET/CEST and safe retries without sending duplicate reports. A daily report is sent even without a sales row; missing remains distinct from a recorded zero.
 - **Security hardening:** the environment/Supabase health diagnostic now requires the existing signed seller or manager session, so unauthenticated requests cannot trigger database probes or inspect configuration status. It still returns no key material.
 - **Dependency patch:** Next.js updated from 15.5.27 to 15.5.28 after `npm audit` found a critical advisory. The audit is clean after the patch.
 
@@ -29,8 +29,8 @@ The UI deliberately refuses activation until the current two recipients have bot
    - `RESEND_API_KEY` — Resend API key with email send permission.
    - `CRON_SECRET` — at least 32 random characters. Keep it out of `NEXT_PUBLIC_*` and browser code.
 3. In Resend, verify the **`stilledev.se` domain** and its DNS records. The code checks that Resend reports the domain as `verified`; it does not claim the exact mailbox was separately verified.
-4. Deploy on a Vercel plan/project that supports an hourly Cron schedule. `vercel.json` invokes the protected endpoint hourly; the route only sends at the chosen whole-hour in `Europe/Stockholm` and retries failures on the next hourly invocations (up to three attempts). The schedule works across CET/CEST because the application checks local time rather than assuming a fixed UTC offset.
-5. In **Inställningar → Morning Sales Briefing**, enter Oliver's and Affe's valid addresses and the hour. Save, preview the report, send a test to both recipients and verify successful delivery in both mailboxes and the log. Only then enable daily sending.
+4. The Hobby-compatible Cron schedule in `vercel.json` uses three separate once-daily UTC runs (05:00, 06:00, and 07:00 UTC). These hit 07:00 Stockholm during both CEST and CET; later same-day invocations can retry a failed send, while the atomic daily claim and Resend idempotency key prevent duplicate emails. The UI fixes the send hour at 07:00 on Hobby because arbitrary local send times cannot be guaranteed by a daily-only UTC scheduler; changing it requires a matching redeploy schedule or a Vercel plan with more frequent Cron support.
+5. In **Inställningar → Morning Sales Briefing**, enter Oliver's and Affe's valid addresses (the Hobby send time is fixed at 07:00). Save, preview the report, send a test to both recipients and verify successful delivery in both mailboxes and the log. Only then enable daily sending.
 6. If either recipient address changes, the schedule is automatically paused; send another successful test before re-enabling.
 
 Required configuration is not present in this checkout, so Resend domain verification, real test delivery and an actual scheduled send remain unverified. No recipient addresses were supplied, so none have been invented or saved. The schedule is **not active** until the checklist is completed in deployment.
@@ -47,7 +47,7 @@ Required configuration is not present in this checkout, so Resend domain verific
 
 ## Checks
 
-- `npm test` — fifteen deterministic tests covering missing versus zero entries, date bounds, coverage-gated forecasts, per-day and weekday-adaptive pacing, historical fallback labels, HTML escaping, Pace Map gap semantics, target pace across weekends, Stockholm CET/CEST conversion, daily retry windows, and DST idempotency.
+- `npm test` — sixteen deterministic tests covering missing versus zero entries, date bounds, coverage-gated forecasts, per-day and weekday-adaptive pacing, historical fallback labels, HTML escaping, Pace Map gap semantics, target pace across weekends, Stockholm CET/CEST conversion, Hobby Cron frequency/UTC hours, daily retry windows, and DST idempotency.
 - `npx tsc --noEmit`
 - `npm run build`
 - `npm audit`

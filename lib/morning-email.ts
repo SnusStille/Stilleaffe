@@ -30,7 +30,7 @@ export async function readMorningSettings(): Promise<MorningSettings> {
   return {
     oliver: normalizeEmail(values[MORNING_SETTING_KEYS.oliver]),
     affe: normalizeEmail(values[MORNING_SETTING_KEYS.affe]),
-    time: /^([01]\d|2[0-3]):00$/.test(values[MORNING_SETTING_KEYS.time] || '') ? values[MORNING_SETTING_KEYS.time] : '07:00',
+    time: '07:00',
     enabled: values[MORNING_SETTING_KEYS.enabled] === 'true',
     testedRecipients: values[MORNING_SETTING_KEYS.tested] || '',
   };

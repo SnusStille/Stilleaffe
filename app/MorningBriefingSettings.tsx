@@ -5,7 +5,6 @@ type DispatchLog = { id: number; kind: 'daily' | 'test'; report_date: string | n
 type SettingsState = { oliver: string; affe: string; time: string; enabled: boolean };
 type SetupState = { resendConfigured: boolean; cronConfigured: boolean; domainVerified: boolean; domainMessage: string; recipientsConfigured: boolean; testPassedForCurrentRecipients: boolean; ledgerReady: boolean; ledgerMessage: string | null };
 const blank: SettingsState = { oliver: '', affe: '', time: '07:00', enabled: false };
-const hourChoices = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
 export default function MorningBriefingSettings() {
   const [form, setForm] = useState<SettingsState>(blank);
@@ -75,9 +74,10 @@ export default function MorningBriefingSettings() {
     <form className="morning-settings-form" onSubmit={(e) => { e.preventDefault(); void post('save', form as any); }}>
       <label><span>Oliver · mottagare</span><input type="email" autoComplete="email" required placeholder="oliver@exempel.se" value={form.oliver} onChange={(e) => setForm((v) => ({ ...v, oliver: e.target.value }))}/></label>
       <label><span>Affe · mottagare</span><input type="email" autoComplete="email" required placeholder="affe@exempel.se" value={form.affe} onChange={(e) => setForm((v) => ({ ...v, affe: e.target.value }))}/></label>
-      <label><span>Utskickstid · svensk tid</span><select value={form.time} onChange={(e) => setForm((v) => ({ ...v, time: e.target.value }))}>{hourChoices.map((time) => <option key={time}>{time}</option>)}</select></label>
-      <button type="submit" className="b" disabled={!!busy || loading}>{busy === 'save' ? 'Sparar…' : 'Spara mottagare och tid'}</button>
+      <label><span>Utskickstid · svensk tid</span><select value="07:00" disabled aria-label="Utskickstid låst till 07:00 Europe/Stockholm"><option value="07:00">07:00 · Europe/Stockholm</option></select></label>
+      <button type="submit" className="b" disabled={!!busy || loading}>{busy === 'save' ? 'Sparar…' : 'Spara mottagare'}</button>
     </form>
+    <p className="morning-hint">Vercel Hobby tillåter endast dagliga Cron-körningar. Tre dagliga UTC-kontroller hanterar CET/CEST och säkra retries; rapporten skickas endast när klockan är 07:00 i Stockholm. En annan utskickstid kräver ändrad schemakonfiguration eller Pro-plan.</p>
 
     <div className="morning-actions">
       <button type="button" className="b pri" disabled={!!busy || !readyToTest} onClick={() => void post('test')}>{busy === 'test' ? 'Skickar test…' : 'Skicka test till båda'}</button>
