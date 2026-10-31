@@ -24,6 +24,8 @@ Använd Node.js 22.x.
 
 ## Senaste förbättringar
 
+- November Evolution: Mission Control med 60k/80k/100k TB-nivåer, dagsplan, täckningsmedveten prognos, pressure meter, rekordjakt och lokal What If-simulator. AI Sales Analyst får upp till fem års kompakt historikunderlag. Monthly Review sammanställer faktisk månad, veckor, rekord och täckning. Morning Briefing har Resend, Vercel Cron, idempotens, leveranslogg, förhandsvisning och test-gate; utskicket förblir avstängt tills miljövariabler, SQL-migrering, domänverifiering, två mottagare och ett lyckat test finns. Se `NOVEMBER-EVOLUTION.md` för konfiguration och begränsningar.
+- Säkerhet: Next.js uppdaterad från 15.5.27 till 15.5.28 efter npm audit; audit är ren.
 - V20–V23: login-hero med tydligare Wall Street-inspirerad bildrörelse, fördjupad 3D i båda rollernas vyer, valbart Studio/Lugn-läge och ett nytt notiscenter i navigeringen (inte längre uppe i sidans högra hörn). Inloggningsanimationerna följer `prefers-reduced-motion`. Se `LOGIN-REDESIGN.md` och `DESIGN-v21.md`–`DESIGN-v23.md`.
 - Tydlig, rollanpassad översikt: Stille får dagens mål och nästa steg; Affe får en skrivskyddad chefsbild med veckomål och trend endast på jämförbara registrerade vardagar.
 - Saknade registreringar visas separat från faktiska nollor. Månadssammanfattningen jämför samma hittillsvarande kalenderperiod och visar registrerade dagar.
@@ -49,5 +51,9 @@ Appen behöver dessa servervariabler:
 - `SUPABASE_SECRET_KEY` (föredragen, `sb_secret_...`) **eller** befintliga `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` JWT); om båda sätts prioriteras `SUPABASE_SECRET_KEY`
 - `ANTHROPIC_API_KEY` (valfri om AI inte ska användas)
 - `ANTHROPIC_MODEL=claude-sonnet-5-5`
+- `RESEND_API_KEY` (valfri; server-side för Morning Sales Briefing)
+- `CRON_SECRET` (minst 32 slumpmässiga tecken; krävs för det skyddade Vercel Cron-utskicket)
+
+Morning Briefing kräver också `supabase/migration-morning-briefing.sql`, verifierad domän `stilledev.se` hos Resend, två sparade mottagare och ett lyckat testmejl innan aktivering. Se `NOVEMBER-EVOLUTION.md`.
 
 Endast en servernyckel med rätt projekt får användas: en `sb_secret_...` eller legacy JWT med `role=service_role`. `anon`/`sb_publishable_...` fungerar inte som adminnycklar. Lägg aldrig någon servernyckel i en `NEXT_PUBLIC_...`-variabel eller i klientkod.

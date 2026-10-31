@@ -17,14 +17,15 @@ import './design-v24.css';
 import './design-v25.css';
 import './design-v26.css';
 import './design-v27.css';
+import './mission-control.css';
 import FocusMode from './FocusMode';
 import Fx from './Fx';
 import FloorBg from './FloorBg';
 import Spotlight from './Spotlight';
 
 export const metadata = {
-  title: 'Säljdashboard',
-  description: 'Privat säljuppföljning – Stille & Affe',
+  title: 'StilleAffe · Mission Control',
+  description: 'Privat Sales Command Center för Stille & Affe',
   icons: { icon: '/icon.svg', apple: '/icon.svg' },
   appleWebApp: { capable: true, title: 'Sälj' },
 };

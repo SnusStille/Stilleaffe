@@ -1,5 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import MissionControl from './MissionControl';
+import MonthlyReview from './MonthlyReview';
+import MorningBriefingSettings from './MorningBriefingSettings';
 import { createPortal } from 'react-dom';
 import {
   Activity, ACHIEVEMENTS, DEF, Goals, greeting, groupByMonth, iso, MOOD_EMOJI, MOOD_LABEL,
@@ -8,12 +11,12 @@ import {
   compareMonths, fmt, fmtMoney, f1, quoteOfDay,
 } from '@/lib/calc';
 
-type TabId = 'overview'|'register'|'history'|'stats'|'year'|'goals'|'comments'|'ai'|'settings'|'achievements';
+type TabId = 'mission'|'review'|'overview'|'register'|'history'|'stats'|'year'|'goals'|'comments'|'ai'|'settings'|'achievements';
 const TABS:{id:TabId;label:string;ic:string}[]=[
-  {id:'overview',label:'Översikt',ic:'◐'},{id:'register',label:'Registrera',ic:'＋'},
+  {id:'mission',label:'Mission Control',ic:'◈'},{id:'review',label:'Monthly Review',ic:'▤'},{id:'overview',label:'Översikt',ic:'◐'},{id:'register',label:'Registrera',ic:'＋'},
   {id:'history',label:'Historik',ic:'☰'},{id:'stats',label:'Statistik',ic:'▥'},
   {id:'year',label:'Årsvy',ic:'▤'},{id:'goals',label:'Mål',ic:'◎'},
-  {id:'comments',label:'Kommentarer',ic:'✎'},{id:'ai',label:'AI-coach',ic:'✦'},
+  {id:'achievements',label:'Achievements',ic:'🏅'},{id:'comments',label:'Kommentarer',ic:'✎'},{id:'ai',label:'AI Sales Analyst',ic:'✦'},
   {id:'settings',label:'Inställningar',ic:'⚙'}];
 
 type Prop={id:string;tool:string;input:any;done?:boolean};
@@ -568,7 +571,7 @@ function Intro({name}:{name:string}){
 export default function App(){
   const[rows,setRows]=useState<Row[]>([]);const[g,setG]=useState<Goals>(DEF);
   const[role,setRole]=useState<''|'seller'|'manager'>('');
-  const[tab,setTab]=useState<TabId>('overview');const[edit,setEdit]=useState<number|null>(null);
+  const[tab,setTab]=useState<TabId>('mission');const[edit,setEdit]=useState<number|null>(null);
   const[toast,setToast]=useState('');const[loading,setLoading]=useState(true);const[fetchedAt,setFetchedAt]=useState(0);const[showAffeTease,setShowAffeTease]=useState(false);
 
   const[rg,setRg]=useState<'Idag'|'Denna vecka'|'Denna månad'|'Föregående månad'|'Detta år'|'Allt'>('Denna månad');
@@ -608,7 +611,7 @@ export default function App(){
   useEffect(()=>{if(!themeInit)return;try{localStorage.setItem('sd_auto_coach',autoCoach?'1':'0')}catch{}},[autoCoach,themeInit]);
 
   // Favicon + document title live update
-  useEffect(()=>{if(loading)return;const ts=rows.find(r=>r.entry_date===today())?.sales||0;const p=pct(ts,g.daily_sales);const accent=getComputedStyle(document.documentElement).getPropertyValue('--gr').trim()||'#58d4ab';const warning=getComputedStyle(document.documentElement).getPropertyValue('--am').trim()||'#d8b05e';const title=`${ts}/${g.daily_sales} (${p}%) · Säljdashboard`;document.title=title;const f=document.querySelector('link[rel="icon"]')as HTMLLinkElement||document.createElement('link');if(!f.parentElement){f.rel='icon';document.head.appendChild(f)}const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#06080b';ctx.fillRect(0,0,64,64);ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,2*Math.PI-Math.PI/2);ctx.stroke();ctx.strokeStyle=ts>=g.daily_sales?accent:p>=70?warning:'#64707d';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,-Math.PI/2+2*Math.PI*(Math.min(p,100)/100));ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 22px Inter,system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(ts),32,32);f.href=canvas.toDataURL('image/png')},[rows,g,loading,role]);
+  useEffect(()=>{if(loading)return;const ts=rows.find(r=>r.entry_date===today())?.sales||0;const p=pct(ts,g.daily_sales);const accent=getComputedStyle(document.documentElement).getPropertyValue('--gr').trim()||'#58d4ab';const warning=getComputedStyle(document.documentElement).getPropertyValue('--am').trim()||'#d8b05e';const title=`${ts}/${g.daily_sales} (${p}%) · StilleAffe`;document.title=title;const f=document.querySelector('link[rel="icon"]')as HTMLLinkElement||document.createElement('link');if(!f.parentElement){f.rel='icon';document.head.appendChild(f)}const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#06080b';ctx.fillRect(0,0,64,64);ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,2*Math.PI-Math.PI/2);ctx.stroke();ctx.strokeStyle=ts>=g.daily_sales?accent:p>=70?warning:'#64707d';ctx.lineWidth=6;ctx.beginPath();ctx.arc(32,32,24,-Math.PI/2,-Math.PI/2+2*Math.PI*(Math.min(p,100)/100));ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 22px Inter,system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(ts),32,32);f.href=canvas.toDataURL('image/png')},[rows,g,loading,role]);
   useEffect(()=>{if(loading)return;const t=rows.find(r=>r.entry_date===today()),goal=Number(g.daily_sales||0);if(!t||goal<=0||Number(t.sales)<goal)return;const k='sd_bell_'+today();try{if(localStorage.getItem(k))return;localStorage.setItem(k,'1')}catch{return}if(sound)ringBell();say('🔔 Dagsmålet är nått – klockan ringer!');document.documentElement.classList.add('bell-flash');setTimeout(()=>document.documentElement.classList.remove('bell-flash'),2200)},[rows,g,loading]);
 
   // Command palette (Ctrl/Cmd+K)
@@ -676,12 +679,15 @@ export default function App(){
 
   // Command palette items
   const cmds=useMemo(()=>{const all:{label:string;icon:string;k?:string;fn:()=>void}[]=[
+    {label:'Öppna Mission Control',icon:'◈',fn:()=>setTab('mission')},
+    {label:'Öppna Monthly Review',icon:'▤',fn:()=>setTab('review')},
     {label:'Gå till Översikt',icon:'◐',fn:()=>setTab('overview')},
     {label:'Registrera ny dag',icon:'＋',fn:()=>setTab('register')},
     {label:'Visa historik',icon:'☰',fn:()=>setTab('history')},
     {label:'Visa statistik',icon:'▥',fn:()=>setTab('stats')},
     {label:'Visa årsvy',icon:'▤',fn:()=>setTab('year')},
     {label:'Visa mål',icon:'◎',fn:()=>setTab('goals')},
+    {label:'Visa achievements',icon:'🏅',fn:()=>setTab('achievements')},
     {label:'Visa kommentarer',icon:'✎',fn:()=>setTab('comments')},
     {label:'Öppna AI-coach',icon:'✦',fn:()=>setTab('ai')},
     {label:'Öppna inställningar',icon:'⚙',fn:()=>setTab('settings')},
@@ -732,6 +738,9 @@ export default function App(){
   const sortedCm=[...pinnedComments,...unpinned];
   const unlockedArr=ACHIEVEMENTS.filter(a=>unlocked.has(a.key));
   const lockedArr=ACHIEVEMENTS.filter(a=>!unlocked.has(a.key));
+  const achievementTiers=[{name:'BRONZE',threshold:1},{name:'SILVER',threshold:4},{name:'GOLD',threshold:7},{name:'PREDATOR',threshold:10},{name:'LEGEND',threshold:13}];
+  const achievementTier=[...achievementTiers].reverse().find(x=>unlockedArr.length>=x.threshold);
+  const nextAchievementTier=achievementTiers.find(x=>unlockedArr.length<x.threshold);
   const weekW=wks[wks.length-1];const weekP=weekW?Math.min(100,Math.round(weekW.sales/Math.max(g.weekly_sales,1)*100)):0;
   const recentCoachRows=rows.filter(r=>r.entry_date<=today()).slice(-5);
   const recentCoachAverage=recentCoachRows.length?sum(recentCoachRows,'sales')/recentCoachRows.length:0;
@@ -778,6 +787,9 @@ export default function App(){
       </div>
       {role==='manager'&&tab==='overview'&&showAffeTease&&<section className="affe-tease"role="status"aria-live="polite"><span className="affe-tease-icon"aria-hidden="true">😏</span><div><div className="affe-tease-k">En snabb pik till Affe</div><p>Du har så bra koll på Stilles siffror att man nästan tror att du säljer själv 😄 Men undrar — vem säljer bäst? 😉</p></div><button type="button"className="affe-tease-close"aria-label="Stäng meddelandet"onClick={()=>setShowAffeTease(false)}>×</button><div className="affe-tease-progress"aria-hidden="true"><i/></div></section>}
       {err&&<div className="c errb"role="alert"><div className="err-title">Databasen kunde inte laddas</div><p className="err-detail">{err}</p><p className="s">{/fetch failed|kunde inte nå servern/i.test(err)?'Vercel kunde inte nå Supabase. Kontrollera Project URL i NEXT_PUBLIC_SUPABASE_URL, att projektet är aktivt och att URL och servernyckel kommer från samma projekt.':'Kontrollera hälsokontrollen och att servern använder en Secret key eller service_role-nyckel — inte anon/publishable.'}</p><div className="row"style={{marginBottom:0}}><button className="b pri"onClick={()=>load()}>Försök igen</button><button className="b"onClick={()=>window.open('/api/health','_blank','noopener,noreferrer')}>Öppna hälsokontroll</button></div></div>}
+
+      {tab==='mission'&&<MissionControl rows={rows} aiEnabled={ks.configured} onOpenAi={(question)=>{setTab('ai');if(ks.configured)ask(question)}}/>}
+      {tab==='review'&&<MonthlyReview rows={rows} aiEnabled={ks.configured} onOpenAi={(question)=>{setTab('ai');if(ks.configured)ask(question)}}/>}
 
       {tab==='overview'&&<>
         <h2>{can?`${greet}, Stille`:'Affes ledningsvy'} <span className="ok">{can?'👋':'◈'}</span></h2>
@@ -982,6 +994,12 @@ export default function App(){
         </div>
       </>}
 
+      {tab==='achievements'&&<>
+        <div className="achievement-hall-head"><div><div className="mission-eyebrow">PRESTATION · KONSEKVENS · RESULTAT</div><h2>Achievement archive</h2><p className="sub">Låses upp från verifierade registreringar och mål — Affes vy är fortsatt skrivskyddad.</p></div><span className="achievement-rank-mark">{achievementTier?.name||'—'}</span></div>
+        <section className="c achievement-rank-panel"><div><span className="mission-eyebrow">AKTUELL NIVÅ</span><h3>{achievementTier?.name||'NO RANK YET'}</h3><p>{unlockedArr.length} av {ACHIEVEMENTS.length} prestationer upplåsta.</p></div><div className="achievement-rank-track"><i style={{width:`${Math.min(100,unlockedArr.length/ACHIEVEMENTS.length*100)}%`}}/></div><b>{nextAchievementTier?`${nextAchievementTier.threshold-unlockedArr.length} kvar till ${nextAchievementTier.name}`:'Högsta nivån uppnådd'}</b><div className="achievement-tier-list">{achievementTiers.map(t=><span key={t.name}className={unlockedArr.length>=t.threshold?'earned':''}>{t.name}<small>{t.threshold}</small></span>)}</div></section>
+        <div className="achievement-grid">{ACHIEVEMENTS.map(a=>{const earned=unlocked.has(a.key);return <article key={a.key}className={'c achievement-item'+(earned?' earned':'')}><span className="achievement-icon"aria-hidden="true">{earned?a.emoji:'◇'}</span><div><span className="achievement-state">{earned?'UPPNÅDD':'LÅST'}</span><h3>{a.name}</h3><p>{a.desc}</p></div><span className="achievement-check">{earned?'✓':'—'}</span></article>})}</div>
+      </>}
+
       {tab==='comments'&&<>
         <h2>Kommentarer</h2><p className="sub">Mellan Stille och Affe. Reagera med emojis eller pinna viktiga meddelanden.</p>
         <div className="c"style={{maxWidth:680,marginBottom:14}}><form onSubmit={postC}>
@@ -992,11 +1010,11 @@ export default function App(){
       </>}
 
       {tab==='ai'&&<>
-        <h2>AI-coach</h2><p className="sub">Föreslår ändringar – du godkänner alltid först. Tryck ⌘K för snabbkommandon var som helst.</p>
+        <h2>AI Sales Analyst</h2><p className="sub">Analys av registrerad historik, inte gissningar. Förslag som ändrar data kräver alltid ditt godkännande.</p>
         {!ks.configured&&<div className="c"style={{maxWidth:600,marginBottom:14}}><div className="k">Aktivera AI</div><p className="s"style={{marginTop:6}}>Klistra in Anthropic-nyckeln (sparas bara på servern).</p>{can?<form onSubmit={e=>{e.preventDefault();keyCall('POST',keyIn)}}><input type="password"placeholder="sk-ant-…"value={keyIn}onChange={e=>setKeyIn(e.target.value)}autoComplete="off"/><button className="b pri"style={{marginTop:8}}>Spara</button></form>:<p className="s">Stille lägger in nyckeln.</p>}</div>}
         {ks.configured&&<div className="row"><span className="tag">✓ AI aktiv ({ks.source==='env'?'miljövariabel':'sparad nyckel'})</span>{can&&ks.source==='db'&&<button className="b ghost"onClick={()=>{if(confirm('Ta bort?'))keyCall('DELETE')}}>Ta bort nyckel</button>}</div>}
         {ks.configured&&<>
-          <div className="row">{(can?['Hur ligger jag till idag?','Föreslå veckans mål','Registrera idag: 5 sälj & 3000 kr','Veckosammanfattning','Peppa mig']:['Hur ska jag coacha Stille idag?','Vad ska jag ta upp med Stille?','Hur går det för Stille?','Veckosammanfattning','Skriv ett peppande meddelande till Stille']).map(x=><button key={x}className="b"disabled={busy}onClick={()=>ask(x)}>{x}</button>)}</div>
+          <div className="row">{(can?['Hur ligger jag till mot 80k?','Analysera min senaste vecka.','Vad behöver jag göra för att nå 100 000 kr?','Vilka dagar presterar jag bäst?','Vad behöver jag förbättra?','Registrera idag: 5 sälj & 3000 kr']:['Hur ska jag coacha Stille idag?','Analysera Stilles senaste vecka.','Hur ligger Stille till mot 80k?','Vilka dagar presterar Stille bäst?','Vad behöver jag följa upp?']).map(x=><button key={x}className="b"disabled={busy}onClick={()=>ask(x)}>{x}</button>)}</div>
           <div className="chat">{msgs.map((m,i)=><div key={i}className={`msg ${m.r} ${m.e?'e':''}`}>{m.t}{m.props?.map(p=><div key={p.id}className="sug">{(p.tool==='registrera_dag'?`Registrera ${p.input.entry_date}: ${p.input.sales} sälj, ${fmtMoney(p.input.tb_sek)}${p.input.hours?', '+p.input.hours+' h':''}`:p.tool==='satt_mal'?'Ändra mål: '+Object.entries(p.input).map(([k,v])=>`${({a:'dagsmål sälj',b:'dagsmål TB',c:'månadsmål sälj',d:'månadsmål TB',e:'veckomål sälj',f:'veckomål TB'}as any)[k]||k} ${fmt(Number(v))}`).join(', '):p.tool==='skriv_kommentar'?`Skicka kommentar: "${p.input.body}"`:JSON.stringify(p.input))}<br/>{p.done?<span className="tag">✓ Gjort</span>:<button className="b pri"style={{marginTop:8}}onClick={()=>apply(p)}>Godkänn</button>}</div>)}</div>)}{busy&&<div className="msg a s">Tänker<span className="dots">…</span></div>}</div>
           <form onSubmit={e=>{e.preventDefault();if(q.trim()){ask(q.trim());setQ('')}}}style={{maxWidth:680,display:'grid',gridTemplateColumns:'1fr auto',gap:8}}><input value={q}maxLength={500}onChange={e=>setQ(e.target.value)}placeholder="Fråga eller be AI:n göra något…"/><button className="b pri"disabled={busy||!q.trim()}>Skicka</button></form>
         </>}
@@ -1006,6 +1024,7 @@ export default function App(){
       {tab==='settings'&&<>
         <h2>Inställningar</h2><p className="sub">Anpassa utseende och säkerhet.</p>
         {can&&<div className="c coach-setting"><div><div className="k">Daglig AI-coach</div><p className="s">När din månadstakt ligger efter får du en kort, personlig nudge högst en gång per dag. Ingen AI-anropas när du ligger i fas.</p></div><button type="button"role="switch"aria-label="Daglig AI-coach"aria-checked={autoCoach}className={'switch '+(autoCoach?'on':'')}onClick={()=>setAutoCoach(v=>!v)}><span/></button></div>}
+        {can&&<MorningBriefingSettings/>}
         <div className="c"style={{maxWidth:580,marginBottom:14}}><div className="k">Tema</div><div className="seg-theme"role="radiogroup"style={{marginTop:12}}>{THEMES.map(t=><button key={t.id}type="button"className={theme===t.id?'on':''}onClick={()=>setTheme(t.id)}aria-pressed={theme===t.id}title={t.label}><span style={{display:'block',width:'100%',height:'100%',borderRadius:10,background:t.grad}}>{t.emoji}</span></button>)}</div><p className="s">Valet sparas i din webbläsare.</p></div>
         <section className="c depth-setting"aria-labelledby="depth-title"><div className="depth-setting-head"><span className="depth-setting-icon"aria-hidden="true">◇</span><div><div className="k"id="depth-title">3D &amp; rörelse</div><p className="s">Välj hur levande dashboarden ska kännas.</p></div></div><div className="depth-choice-list"role="group"aria-label="Visuellt dashboardläge"><button type="button"className={'depth-choice'+(depthMode==='studio'?' on':'')}aria-pressed={depthMode==='studio'}onClick={()=>setDepthMode('studio')}><span className="depth-choice-glyph"aria-hidden="true">✧</span><span><strong>Studio</strong><small>Mer 3D och subtil rörelse</small></span><span className="depth-choice-check"aria-hidden="true">✓</span></button><button type="button"className={'depth-choice'+(depthMode==='quiet'?' on':'')}aria-pressed={depthMode==='quiet'}onClick={()=>setDepthMode('quiet')}><span className="depth-choice-glyph"aria-hidden="true">◌</span><span><strong>Lugn</strong><small>Statiskt djup, färre övergångar</small></span><span className="depth-choice-check"aria-hidden="true">✓</span></button></div><p className="depth-setting-note">Sparas i den här webbläsaren. Operativsystemets inställning för reducerad rörelse gäller alltid först.</p></section>
         <div className="c"style={{maxWidth:580,marginBottom:14}}><div className="k">Ljud</div><div className="row"style={{margin:0}}><button className="b"onClick={()=>setSound(s=>!s)}>{sound?'🔊 Ljud på':'🔇 Ljud av'}</button><span className="s">Spelar ett litet chime vid mål och stora händelser.</span></div></div>
