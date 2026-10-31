@@ -46,6 +46,7 @@ Required configuration is not present in this checkout, so Resend domain verific
 
 ## Checks
 
+- `npm test` — nine deterministic tests covering missing versus zero entries, date bounds, coverage-gated forecasts, per-day pacing, historical fallback labels, HTML escaping, Stockholm CET/CEST conversion, daily retry windows, and DST idempotency.
 - `npx tsc --noEmit`
 - `npm run build`
 - `npm audit`

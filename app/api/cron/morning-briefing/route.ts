@@ -1,19 +1,14 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { admin } from '@/lib/secrets';
-import { currentStockholmParts, checkResendDomain, loadMorningMetrics, prepareMorningEmail, readMorningSettings, recipientsFingerprint, sendMorningEmail, validEmail, type PreparedMorningEmail } from '@/lib/morning-email';
+import { checkResendDomain, loadMorningMetrics, prepareMorningEmail, readMorningSettings, recipientsFingerprint, sendMorningEmail, validEmail, type PreparedMorningEmail } from '@/lib/morning-email';
+import { resolveMorningSchedule, stockholmParts } from '@/lib/morning-schedule';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 const privateHeaders = { 'Cache-Control': 'private, no-store, no-cache, max-age=0, must-revalidate', Pragma: 'no-cache' };
 const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: privateHeaders });
-const previousDate = (date: string) => {
-  const value = new Date(`${date}T12:00:00Z`);
-  value.setUTCDate(value.getUTCDate() - 1);
-  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`;
-};
-
 function authorized(req: Request) {
   const secret = (process.env.CRON_SECRET || '').trim();
   const supplied = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
@@ -29,20 +24,18 @@ export async function GET(req: Request) {
     if (!settings.enabled) return reply({ ok: true, skipped: 'disabled' });
     const recipients = [...new Set([settings.oliver, settings.affe])];
     const fingerprint = recipientsFingerprint(settings.oliver, settings.affe);
-    const parts = currentStockholmParts();
+    const parts = stockholmParts();
     const scheduledHour = Number(settings.time.slice(0, 2));
-    const rolloverRetryEnd = scheduledHour + 2 - 24;
-    const retryingAfterMidnight = scheduledHour >= 22 && parts.hour <= rolloverRetryEnd;
-    const reportDate = retryingAfterMidnight ? previousDate(parts.date) : parts.date;
-    const retryHoursElapsed = retryingAfterMidnight ? 24 - scheduledHour + parts.hour : parts.hour - scheduledHour;
-    const withinRetryWindow = retryHoursElapsed >= 0 && retryHoursElapsed <= 2;
+    const schedule = resolveMorningSchedule(parts, scheduledHour);
+    const reportDate = schedule.reportDate;
+    const withinRetryWindow = schedule.withinRetryWindow;
     const key = `daily:${reportDate}`;
     const sb = admin();
     const { data: prior, error: readError } = await sb.from('email_dispatch_logs')
       .select('status,attempts,started_at,email_payload').eq('idempotency_key', key).maybeSingle();
     if (readError) return reply({ error: 'Kör supabase/migration-morning-briefing.sql innan cron körs.' }, 503);
     if (prior?.status === 'sent') return reply({ ok: true, skipped: 'already-sent', date: reportDate });
-    const scheduledNow = !retryingAfterMidnight && parts.hour === scheduledHour;
+    const scheduledNow = schedule.scheduledNow;
     const retrying = !!prior && prior.status !== 'sent' && withinRetryWindow && Number(prior.attempts) < 3;
     if (!scheduledNow && !retrying) return reply({ ok: true, skipped: 'outside-send-window', localTime: `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}` });
     if (prior?.status === 'sending' && Date.now() - Date.parse(prior.started_at) < 20 * 60_000) {

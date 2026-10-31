@@ -113,10 +113,3 @@ export async function buildAndSendMorningEmail(recipients: string[], metrics: Mo
   const content = await prepareMorningEmail(metrics);
   return sendMorningEmail(recipients, content, idempotencyKey);
 }
-
-export function currentStockholmParts(date = new Date()) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Stockholm', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).formatToParts(date).map((x) => [x.type, x.value]));
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour), minute: Number(parts.minute) };
-}

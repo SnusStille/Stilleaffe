@@ -57,3 +57,8 @@ Appen behöver dessa servervariabler:
 Morning Briefing kräver också `supabase/migration-morning-briefing.sql`, verifierad domän `stilledev.se` hos Resend, två sparade mottagare och ett lyckat testmejl innan aktivering. Se `NOVEMBER-EVOLUTION.md`.
 
 Endast en servernyckel med rätt projekt får användas: en `sb_secret_...` eller legacy JWT med `role=service_role`. `anon`/`sb_publishable_...` fungerar inte som adminnycklar. Lägg aldrig någon servernyckel i en `NEXT_PUBLIC_...`-variabel eller i klientkod.
+
+## Lokal verifiering
+
+- `npm test` kör deterministiska tester för Morning Briefing-beräkningar, skydd mot att saknade dagar räknas som noll, e-postrendering och Stockholm-tidszon/cron-retries.
+- `npx tsc --noEmit` och `npm run build` kontrollerar typer och produktionsbygge.
