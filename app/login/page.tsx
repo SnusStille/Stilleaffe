@@ -259,7 +259,7 @@ export default function Login() {
 
           <details className="auth-recovery">
             <summary>Kan du inte logga in?</summary>
-            <p>Det finns ingen automatisk återställningslänk och ett befintligt lösenord kan inte visas. Kontakta {role === 'seller' ? 'Affe' : 'Stille'} för hjälp med en säker återställning.</p>
+            <p>Det finns ingen automatisk återställningslänk och inloggningssidan visar inte lösenordet. Kontakta {role === 'seller' ? 'Affe' : 'Stille'} för hjälp med en säker återställning.</p>
           </details>
 
           <div className="auth-divider"><span>BEHÖRIG ÅTKOMST</span></div>
