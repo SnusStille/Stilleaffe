@@ -17,7 +17,8 @@
 - **AI Sales Analyst:** example questions and real five-year Supabase context. No new AI provider or schema for analytics.
 - **Monthly Review / Autopsy:** month selector, fixed target comparison, actual weekly totals, weekday averages, first/second-half split, best days and prior-month actuals. Missing-date coverage is surfaced. AI analysis is optional and fed the selected period's actual metrics.
 - **Morning Sales Briefing:** dark responsive HTML and text report; server-side Resend send; seller-only recipient/time settings; Resend-domain check; manual preview and test; daily delivery history; idempotent daily claim; up to three total attempts with safe retries (including across midnight); and a Vercel Cron route that checks `Europe/Stockholm` time regardless of server UTC. A daily report is sent even without a sales row; missing remains distinct from a recorded zero.
-- **Security patch:** Next.js updated from 15.5.27 to 15.5.28 after `npm audit` found a critical advisory. The audit is clean after the patch.
+- **Security hardening:** the environment/Supabase health diagnostic now requires the existing signed seller or manager session, so unauthenticated requests cannot trigger database probes or inspect configuration status. It still returns no key material.
+- **Dependency patch:** Next.js updated from 15.5.27 to 15.5.28 after `npm audit` found a critical advisory. The audit is clean after the patch.
 
 ## Email activation checklist — currently inactive until all steps pass
 

@@ -6,7 +6,6 @@ function isOpen(p: string): boolean {
     p === '/login' ||
     p === '/api/login' ||
     p === '/api/logout' ||
-    p === '/api/health' ||
     p === '/api/cron/morning-briefing' ||
     p === '/favicon.ico' ||
     p.startsWith('/_next/') ||

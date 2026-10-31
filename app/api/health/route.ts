@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { admin } from '@/lib/secrets';
 import { classifySupabaseAdminKey, getSupabaseAdminConfig } from '@/lib/supabase-config';
 
-// This is a live diagnostic, not a build-time snapshot. Never return key material.
+// Authenticated live diagnostic, not a build-time snapshot. Never return key material.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -12,7 +12,11 @@ const noStore = {
   Expires: '0',
 };
 
-export async function GET() {
+export async function GET(req: Request) {
+  const role = req.headers.get('x-role');
+  if (role !== 'seller' && role !== 'manager') {
+    return NextResponse.json({ error: 'Inte inloggad' }, { status: 401, headers: noStore });
+  }
   const config = getSupabaseAdminConfig();
   const env = {
     SELLER_PASSWORD: !!process.env.SELLER_PASSWORD?.trim(),
