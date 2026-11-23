@@ -1,49 +1,40 @@
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import './design-v9.css';
-import './design-v10.css';
-import './design-v12.css';
-import './design-v13.css';
-import './design-v16.css';
-import './design-v17.css';
-// Keep the Deep Carbon skin as the final base layer over GitHub's feature styles.
-import './design-v11.css';
-import './design-v18.css';
-import './design-v19.css';
-import './design-v20.css';
-import './design-v21.css';
-import './design-v22.css';
-import './design-v23.css';
-import './design-v24.css';
-import './design-v25.css';
-import './design-v26.css';
-import './design-v27.css';
-import FocusMode from './FocusMode';
-import Fx from './Fx';
-import FloorBg from './FloorBg';
-import Spotlight from './Spotlight';
 
-export const metadata = {
-  title: 'Säljdashboard',
-  description: 'Privat säljuppföljning – Stille & Affe',
+export const metadata: Metadata = {
+  title: { default: 'Label Lab — Sales Performance', template: '%s · Label Lab' },
+  description:
+    'Label Lab är teamets interna sales performance-system: månadsresultat, takt, prognoser, teamjämförelse och spelguide.',
+  applicationName: 'Label Lab',
+  keywords: ['Label Lab', 'sales performance', 'ViPo', 'Brandkollen', 'Konsumentkollen'],
   icons: { icon: '/icon.svg', apple: '/icon.svg' },
-  appleWebApp: { capable: true, title: 'Sälj' },
+  manifest: '/manifest.webmanifest',
+  openGraph: {
+    title: 'Label Lab — Sales Performance',
+    description: 'Internt sales performance-system för teamet bakom ViPo Säkerhetstjänster.',
+    type: 'website',
+    siteName: 'Label Lab',
+  },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  viewportFit: 'cover' as const,
-  themeColor: '#06080b',
+  viewportFit: 'cover',
+  themeColor: '#07090c',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv" style={{ colorScheme: 'dark' }}>
       <body>
-        <FloorBg />
-        <Spotlight />
-        <Fx />
-        <FocusMode />
+        <div className="bg_ambient" aria-hidden="true">
+          <span className="bg_glow bg_glow-a" />
+          <span className="bg_glow bg_glow-b" />
+          <span className="bg_glow bg_glow-c" />
+          <span className="bg_grid" />
+          <span className="bg_noise" />
+        </div>
         {children}
       </body>
     </html>

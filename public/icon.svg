@@ -1,10 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Stille och Affe">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Label Lab">
   <defs>
-    <linearGradient id="s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8cebc7"/><stop offset="1" stop-color="#45d6a4"/></linearGradient>
-    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b7a3ff"/><stop offset="1" stop-color="#55bfce"/></linearGradient>
+    <linearGradient id="iBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#161d25"/><stop offset="0.55" stop-color="#0b0f14"/><stop offset="1" stop-color="#06080b"/></linearGradient>
+    <linearGradient id="iMint" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8ff7dc"/><stop offset="0.5" stop-color="#4fe3c1"/><stop offset="1" stop-color="#1fb9a0"/></linearGradient>
+    <linearGradient id="iChrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f8fc"/><stop offset="0.5" stop-color="#c3ceda"/><stop offset="1" stop-color="#8291a2"/></linearGradient>
+    <radialGradient id="iGlow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#5eead4" stop-opacity=".4"/><stop offset="1" stop-color="#5eead4" stop-opacity="0"/></radialGradient>
   </defs>
-  <rect width="128" height="128" rx="30" fill="#090e14"/>
-  <rect x="13" y="13" width="102" height="102" rx="27" fill="#141e29" stroke="#ffffff" stroke-opacity=".12" stroke-width="2"/>
-  <text x="54" y="84" font-family="Arial,sans-serif" font-size="66" font-weight="900" text-anchor="middle" fill="url(#s)">S</text>
-  <text x="88" y="84" font-family="Arial,sans-serif" font-size="66" font-weight="900" text-anchor="middle" fill="url(#a)">A</text>
+  <rect width="128" height="128" rx="32" fill="url(#iBg)"/>
+  <rect x="1" y="1" width="126" height="126" rx="31" fill="none" stroke="#ffffff" stroke-opacity=".16"/>
+  <circle cx="64" cy="64" r="48" fill="url(#iGlow)"/>
+  <path d="M42 34 V86 H66" fill="none" stroke="url(#iChrome)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity=".62"/>
+  <path d="M64 50 V100 H88" fill="none" stroke="url(#iMint)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="96" cy="48" r="6.5" fill="#0b0f14"/><circle cx="96" cy="48" r="4.6" fill="url(#iMint)"/>
 </svg>

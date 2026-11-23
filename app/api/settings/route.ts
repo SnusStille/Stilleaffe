@@ -1,28 +1,31 @@
 import { NextResponse } from 'next/server';
-import { admin } from '@/lib/secrets';
+import { admin, keyStatus } from '@/lib/secrets';
+import { sessionFromRequest } from '@/lib/auth';
+import { getUsers } from '@/lib/users';
 
-// Snabb server-klocka för polling/uppdatering och lista på inställningar.
+export const dynamic = 'force-dynamic';
+
+const privateHeaders = {
+  'Cache-Control': 'private, no-store, no-cache, max-age=0, must-revalidate',
+  Pragma: 'no-cache',
+};
+
 export async function GET(req: Request) {
-  const role = req.headers.get('x-role');
-  if (role !== 'seller' && role !== 'manager') return NextResponse.json({ error: 'Inte inloggad' }, { status: 401 });
-  let settings: any = {};
+  const session = sessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'Inte inloggad' }, { status: 401, headers: privateHeaders });
+  const settings: Record<string, string> = {};
   try {
     const { data } = await admin().from('app_settings').select('key,value');
     for (const r of data || []) {
-      if (r.key === 'seller_password' || r.key === 'manager_password' || r.key === 'anthropic_api_key') continue;
+      // Only expose non-sensitive, user-facing flags (e.g. seen markers).
+      if (!/^seen_[a-z0-9_-]{1,40}$/.test(r.key)) continue;
       settings[r.key] = r.value;
     }
   } catch {}
-  return NextResponse.json({ ok: true, serverNow: new Date().toISOString(), role, settings });
-}
-
-export async function POST(req: Request) {
-  if (req.headers.get('x-role') !== 'seller') return NextResponse.json({ error: 'Bara säljaren' }, { status: 403 });
-  let b: any; try { b = await req.json(); } catch { return NextResponse.json({ error: 'Ogiltig' }, { status: 400 }); }
-  const k = String(b.key || ''); const v = String(b.value == null ? '' : b.value);
-  if (!/^[a-z_]{2,40}$/.test(k)) return NextResponse.json({ error: 'Ogiltig nyckel' }, { status: 400 });
-  if (k.startsWith('seller') || k.startsWith('manager') || k === 'anthropic_api_key') return NextResponse.json({ error: 'Reserverad nyckel' }, { status: 400 });
-  if (!v) await admin().from('app_settings').delete().eq('key', k);
-  else await admin().from('app_settings').upsert({ key: k, value: v });
-  return NextResponse.json({ ok: true });
+  const users = session.role === 'manager' ? await getUsers() : undefined;
+  const ai = await keyStatus().catch(() => ({ configured: false, source: null }));
+  return NextResponse.json(
+    { ok: true, serverNow: new Date().toISOString(), me: session, settings, users, ai: { configured: ai.configured, source: ai.source } },
+    { headers: privateHeaders },
+  );
 }
