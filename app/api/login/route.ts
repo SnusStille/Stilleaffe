@@ -1,61 +1,80 @@
 import { NextResponse } from 'next/server';
-import { token, invalidatePasswordCache, pwFor, AUTH_VERSION, AUTH_COOKIE } from '@/lib/auth';
-
-const tries = new Map<string, { count: number; until: number }>();
-const MAX_TRIES = 10;
-const WINDOW_MS = 10 * 60 * 1000;
+import {
+  createSessionValue,
+  loginBlocked,
+  recordLoginFailure,
+  clearLoginFailures,
+  clientIp,
+  passwordFor,
+  verifyPassword,
+  SESSION_COOKIE,
+  sessionCookieOptions,
+} from '@/lib/auth';
+import { getUser } from '@/lib/users';
 
 export const runtime = 'nodejs';
 
+const MSG = {
+  bad: 'Ogiltig förfrågan. Ladda om sidan och försök igen.',
+  missing: 'Användarnamn och lösenord krävs.',
+  pw: 'Fel användarnamn eller lösenord.',
+  blocked: 'För många försök. Vänta en stund innan du försöker igen.',
+  server: 'Serverfel – försök igen om en stund.',
+  notfound: 'Fel användarnamn eller lösenord.',
+};
+
 export async function POST(req: Request) {
-  const isForm = !(req.headers.get('content-type') || '').includes('json');
-  const back = (e: string, status: number) =>
-    isForm
-      ? NextResponse.redirect(new URL('/login?e=' + encodeURIComponent(e), req.url), 303)
-      : NextResponse.json({ error: e }, { status });
   try {
-    invalidatePasswordCache();
-    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
-    const now = Date.now();
-    let lim = tries.get(ip);
-    if (!lim || lim.until < now) lim = { count: 0, until: now + WINDOW_MS };
-    if (lim.count >= MAX_TRIES) return back('rate', 429);
+    let username = '';
+    let password = '';
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('json')) {
+      const body = await req.json();
+      username = String(body?.username || '');
+      password = String(body?.password || '');
+    } else {
+      const form = await req.formData();
+      username = String(form.get('username') || '');
+      password = String(form.get('password') || '');
+    }
 
-    let roleIn = 'seller', passwordIn = '';
-    try {
-      const ct = req.headers.get('content-type') || '';
-      if (ct.includes('json')) {
-        const b = await req.json();
-        roleIn = String(b?.role || 'seller');
-        passwordIn = String(b?.password || '');
-      } else {
-        const f = await req.formData();
-        roleIn = String(f.get('role') || 'seller');
-        passwordIn = String(f.get('password') || '');
-      }
-    } catch { return back('bad', 400); }
+    username = username.trim().toLowerCase();
+    password = password.trim();
+    if (!username || !password) {
+      return NextResponse.json({ error: MSG.missing }, { status: 400 });
+    }
+    if (username.length > 64 || password.length > 512) {
+      return NextResponse.json({ error: MSG.pw }, { status: 401 });
+    }
 
-    const role: 'seller' | 'manager' = roleIn === 'manager' ? 'manager' : 'seller';
-    const password = (passwordIn || '').trim();
-    if (!password) return back('pw', 401);
+    const ip = clientIp(req);
+    const gate = loginBlocked(ip, username);
+    if (gate.blocked) {
+      return NextResponse.json(
+        { error: MSG.blocked, retryAfter: gate.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(gate.retryAfter || 600) } },
+      );
+    }
 
-    const pw = await pwFor(role);
-    if (!pw) { console.error('[login] saknar lösenord för', role); return back('missing', 500); }
-    const [got, want] = await Promise.all([token(password, role), token(pw, role)]);
-    if (got !== want) { lim.count += 1; tries.set(ip, lim); return back('pw', 401); }
+    const user = await getUser(username);
+    const stored = passwordFor(username);
+    // Run the hash comparison even for unknown users to keep timing uniform.
+    const ok = verifyPassword(password, stored) && !!user;
+    if (!ok) {
+      recordLoginFailure(ip, username);
+      return NextResponse.json({ error: MSG.pw }, { status: 401 });
+    }
 
-    tries.delete(ip);
-    const cookieVal = `${AUTH_VERSION}.${role}.${want}`;
-    const isProd = process.env.NODE_ENV === 'production';
-    const res = isForm
-      ? NextResponse.redirect(new URL('/', req.url), 303)
-      : NextResponse.json({ ok: true });
-    res.cookies.set(AUTH_COOKIE, cookieVal, {
-      httpOnly: true, sameSite: 'lax', secure: isProd, path: '/', maxAge: 60 * 60 * 24 * 30,
+    clearLoginFailures(ip, username);
+    const value = await createSessionValue(user.username, user.role);
+    const res = NextResponse.json({
+      ok: true,
+      user: { username: user.username, display_name: user.display_name, role: user.role },
     });
+    res.cookies.set(SESSION_COOKIE, value, sessionCookieOptions());
     return res;
-  } catch (err: any) {
+  } catch (err) {
     console.error('[login]', err);
-    return back('server', 500);
+    return NextResponse.json({ error: MSG.server }, { status: 500 });
   }
 }

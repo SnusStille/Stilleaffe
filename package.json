@@ -1,6 +1,6 @@
 {
-  "name": "saljdashboard",
-  "version": "7.0.0",
+  "name": "label-lab",
+  "version": "1.0.0",
   "private": true,
   "engines": {
     "node": ">=22.0.0 <23.0.0"
@@ -8,19 +8,28 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "hash-password": "node scripts/hash-password.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.10",
     "@supabase/supabase-js": "2.117.3",
     "next": "15.5.27",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@types/node": "20.14.9",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
-    "typescript": "5.5.4"
+    "@types/three": "^0.170.0",
+    "typescript": "5.5.4",
+    "vitest": "^2.1.8"
   },
   "overrides": {
     "postcss": "8.5.29"

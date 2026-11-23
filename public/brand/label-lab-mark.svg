@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Label Lab">
+  <defs>
+    <linearGradient id="llBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161d25"/>
+      <stop offset="0.55" stop-color="#0b0f14"/>
+      <stop offset="1" stop-color="#06080b"/>
+    </linearGradient>
+    <linearGradient id="llMint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ff7dc"/>
+      <stop offset="0.5" stop-color="#4fe3c1"/>
+      <stop offset="1" stop-color="#1fb9a0"/>
+    </linearGradient>
+    <linearGradient id="llChrome" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f8fc"/>
+      <stop offset="0.5" stop-color="#c3ceda"/>
+      <stop offset="1" stop-color="#8291a2"/>
+    </linearGradient>
+    <radialGradient id="llGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#5eead4" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="llSoft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <rect width="128" height="128" rx="32" fill="url(#llBg)"/>
+  <rect x="1" y="1" width="126" height="126" rx="31" fill="none" stroke="#ffffff" stroke-opacity=".14"/>
+  <path d="M8 34 A26 26 0 0 1 34 8 H94 A26 26 0 0 1 120 34" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="2"/>
+
+  <circle cx="64" cy="64" r="46" fill="url(#llGlow)" filter="url(#llSoft)" opacity=".55"/>
+
+  <!-- Back L : chrome -->
+  <path d="M42 34 V86 H66" fill="none" stroke="url(#llChrome)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity=".62"/>
+  <!-- Front L : mint -->
+  <path d="M64 50 V100 H88" fill="none" stroke="url(#llMint)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Label pin -->
+  <circle cx="96" cy="48" r="6.5" fill="#0b0f14"/>
+  <circle cx="96" cy="48" r="4.6" fill="url(#llMint)"/>
+</svg>

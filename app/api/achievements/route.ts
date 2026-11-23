@@ -1,40 +1,76 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/secrets';
-import { ACHIEVEMENTS, DEF, Goals, Row } from '@/lib/calc';
-const err = (m: string, s = 400) => NextResponse.json({ error: m }, { status: s });
-const VALID = new Set(ACHIEVEMENTS.map(a => a.key));
-function roleFor(req: Request) { const r = req.headers.get('x-role') || ''; return r === 'seller' || r === 'manager' ? r : ''; }
+import { sessionFromRequest } from '@/lib/auth';
+import { ACHIEVEMENTS, DEFAULT_GOALS } from '@/lib/calc';
+import { getGoalsFor } from '@/lib/users';
+import type { Entry, Goals } from '@/lib/types';
+
+const privateHeaders = {
+  'Cache-Control': 'private, no-store, no-cache, max-age=0, must-revalidate',
+  Pragma: 'no-cache',
+};
+const err = (m: string, s = 400) => NextResponse.json({ error: m }, { status: s, headers: privateHeaders });
+const VALID = new Set(ACHIEVEMENTS.map((a) => a.key));
 
 export async function GET(req: Request) {
-  if (!roleFor(req)) return err('Inte inloggad', 401);
-  const { data, error } = await admin().from('achievements').select('key, unlocked_at').order('unlocked_at', { ascending: true });
+  const session = sessionFromRequest(req);
+  if (!session) return err('Inte inloggad', 401);
+  const { data, error } = await admin()
+    .from('achievements')
+    .select('key,unlocked_at')
+    .eq('username', session.username)
+    .order('unlocked_at', { ascending: true });
   if (error) return err('Databasfel: ' + error.message, 500);
-  return NextResponse.json({ items: data || [] });
+  return NextResponse.json({ items: data || [] }, { headers: privateHeaders });
 }
 
 export async function POST(req: Request) {
-  const role = roleFor(req);
-  if (!role) return err('Inte inloggad', 401);
-  if (role !== 'seller') return err('Endast Stille kan uppnå märken', 403);
-  let b: any; try { b = await req.json(); } catch { return err('Ogiltig'); }
+  const session = sessionFromRequest(req);
+  if (!session) return err('Inte inloggad', 401);
+  if (session.role !== 'seller') return err('Endast säljare kan låsa upp märken.', 403);
+  let b: any;
+  try {
+    b = await req.json();
+  } catch {
+    return err('Ogiltig');
+  }
   const key = String(b.key || '');
   if (!VALID.has(key)) return err('Okänt märke');
+
   const sb = admin();
-  const [r, g] = await Promise.all([
-    sb.from('sales_entries').select('id,entry_date,sales,tb_sek,hours,note,rating,mood,tags').order('entry_date'),
-    sb.from('goals').select('*').eq('id', 1).maybeSingle(),
+  const [rows, goals] = await Promise.all([
+    sb.from('sales_entries')
+      .select('id,seller_username,entry_date,sales,tb_sek,hours,note,rating,mood,tags,brandkollen_sales,konsumentkollen_sales,brandkollen_tb,konsumentkollen_tb')
+      .eq('seller_username', session.username)
+      .order('entry_date'),
+    getGoalsFor(session.username),
   ]);
-  if (r.error) return err('Databasfel: ' + r.error.message, 500);
-  if (g.error) return err('Databasfel: ' + g.error.message, 500);
-  const rows = (r.data || []).map((x: any) => ({ ...x, sales: Number(x.sales), tb_sek: Number(x.tb_sek) })) as Row[];
-  const goals: Goals = g.data ? {
-    daily_sales: Number(g.data.daily_sales), daily_tb: Number(g.data.daily_tb),
-    weekly_sales: Number(g.data.weekly_sales), weekly_tb: Number(g.data.weekly_tb),
-    monthly_sales: Number(g.data.monthly_sales), monthly_tb: Number(g.data.monthly_tb),
-  } : DEF;
-  const definition = ACHIEVEMENTS.find(a => a.key === key)!;
-  if (!definition.cond(rows, goals, new Set())) return err('Milstolpen är inte uppnådd ännu.', 409);
-  const { data, error } = await sb.from('achievements').upsert({ key }, { onConflict: 'key', ignoreDuplicates: true }).select('key').maybeSingle();
+  if (rows.error) return err('Databasfel: ' + rows.error.message, 500);
+  const entries: Entry[] = (rows.data || []).map((x: any) => ({
+    id: Number(x.id),
+    seller_username: session.username,
+    entry_date: String(x.entry_date),
+    sales: Number(x.sales || 0),
+    tb_sek: Number(x.tb_sek || 0),
+    hours: x.hours == null ? null : Number(x.hours),
+    note: x.note ?? null,
+    rating: x.rating == null ? null : Number(x.rating),
+    mood: x.mood || null,
+    tags: Array.isArray(x.tags) ? x.tags : [],
+    brandkollen_sales: x.brandkollen_sales == null ? null : Number(x.brandkollen_sales),
+    konsumentkollen_sales: x.konsumentkollen_sales == null ? null : Number(x.konsumentkollen_sales),
+    brandkollen_tb: x.brandkollen_tb == null ? null : Number(x.brandkollen_tb),
+    konsumentkollen_tb: x.konsumentkollen_tb == null ? null : Number(x.konsumentkollen_tb),
+  }));
+  const def = ACHIEVEMENTS.find((a) => a.key === key)!;
+  if (!def.cond(entries, goals as Goals)) return err('Milstolpen är inte uppnådd ännu.', 409);
+
+  const { data, error } = await sb
+    .from('achievements')
+    .upsert({ username: session.username, key }, { onConflict: 'username,key', ignoreDuplicates: true })
+    .select('key')
+    .maybeSingle();
   if (error) return err('Databasfel: ' + error.message, 500);
-  return NextResponse.json({ ok: true, newly: data != null });
+  return NextResponse.json({ ok: true, newly: data != null }, { headers: privateHeaders });
 }
+

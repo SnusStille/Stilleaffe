@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 128" role="img" aria-label="Label Lab — Sales Performance">
+  <defs>
+    <linearGradient id="llBgL" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161d25"/><stop offset="0.55" stop-color="#0b0f14"/><stop offset="1" stop-color="#06080b"/>
+    </linearGradient>
+    <linearGradient id="llMintL" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ff7dc"/><stop offset="0.5" stop-color="#4fe3c1"/><stop offset="1" stop-color="#1fb9a0"/>
+    </linearGradient>
+    <linearGradient id="llChromeL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f8fc"/><stop offset="0.5" stop-color="#c3ceda"/><stop offset="1" stop-color="#8291a2"/>
+    </linearGradient>
+    <radialGradient id="llGlowL" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#5eead4" stop-opacity=".38"/><stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="llSoftL" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+
+  <g>
+    <rect width="128" height="128" rx="32" fill="url(#llBgL)"/>
+    <rect x="1" y="1" width="126" height="126" rx="31" fill="none" stroke="#ffffff" stroke-opacity=".14"/>
+    <circle cx="64" cy="64" r="46" fill="url(#llGlowL)" filter="url(#llSoftL)" opacity=".55"/>
+    <path d="M42 34 V86 H66" fill="none" stroke="url(#llChromeL)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity=".62"/>
+    <path d="M64 50 V100 H88" fill="none" stroke="url(#llMintL)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="96" cy="48" r="6.5" fill="#0b0f14"/><circle cx="96" cy="48" r="4.6" fill="url(#llMintL)"/>
+  </g>
+
+  <g transform="translate(166 34)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8.5">
+    <g stroke="#0c1218">
+      <path d="M8 0 V56 H34"/>
+      <path d="M52 56 L72 0 L92 56 M59 38 H85"/>
+      <path d="M110 0 V56 M110 0 H126 Q140 0 140 14 Q140 28 126 28 H110 M110 28 H128 Q142 28 142 42 Q142 56 128 56 H110"/>
+      <path d="M180 0 H158 V56 H180 M158 28 H177"/>
+    </g>
+    <g stroke="#0f9e8a">
+      <path d="M222 0 V56 H248"/>
+      <path d="M266 56 L286 0 L306 56 M273 38 H299"/>
+      <path d="M324 0 V56 M324 0 H340 Q354 0 354 14 Q354 28 340 28 H324 M324 28 H342 Q356 28 356 42 Q356 56 342 56 H324"/>
+    </g>
+  </g>
+
+  <g transform="translate(168 104)" fill="#5c6877" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="600" letter-spacing="3.4">
+    <text>SALES PERFORMANCE</text>
+  </g>
+</svg>
