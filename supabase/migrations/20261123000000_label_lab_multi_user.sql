@@ -78,8 +78,13 @@ create table if not exists public.comments (
   pinned boolean not null default false,
   created_at timestamptz not null default now()
 );
+alter table public.comments add column if not exists entry_date date;
 alter table public.comments add column if not exists reaction text;
 alter table public.comments add column if not exists pinned boolean not null default false;
+-- Samma begränsning som i supabase/schema.sql (1–2000 tecken); ersätter ev. äldre check.
+alter table public.comments drop constraint if exists comments_body_check;
+alter table public.comments drop constraint if exists comments_body_length_check;
+alter table public.comments add constraint comments_body_length_check check (char_length(body) between 1 and 2000);
 
 create table if not exists public.activity_log (
   id bigint generated always as identity primary key,
