@@ -6,6 +6,12 @@
 -- mål eller konton som redan finns. Ta en backup (Dashboard → Database
 -- → Backups) innan första körningen.
 --
+-- VIKTIGT · Kör migreringen och driftsätt den nya koden direkt efteråt.
+-- Den gamla appen sparar med upsert på entry_date ensam och på
+-- achievements.key ensam; de två unika nycklarna byts ut här, så gamla
+-- appen kan läsa men inte spara från migrationen tills nya koden är live
+-- (normalt 1–2 minuters byggtid). Gör det vid en lugn tidpunkt.
+--
 -- Vad den gör
 --  1. app_users           – fyra konton: stille, affe, fredland, kvist
 --  2. user_goals          – mål per säljare (Stilles nuvarande mål kopieras
