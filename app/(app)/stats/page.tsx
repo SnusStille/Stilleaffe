@@ -4,8 +4,10 @@ import { useMemo, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Icon } from '@/components/icons';
 import { Avatar, Badge, Delta, Empty, Skeleton } from '@/components/ui';
+import { HeatYear } from '@/components/heat-year';
+import { InsightsCard } from '@/components/insights-card';
+import { buildInsights } from '@/lib/analysis';
 import {
-  addDays,
   bestGoalStreak,
   bestWeek,
   buildMonthStats,
@@ -13,7 +15,6 @@ import {
   f1,
   fmt,
   fmtMoney,
-  isWorkday,
   monthLabel,
   monthOf,
   monthOptions,
@@ -57,26 +58,14 @@ export default function StatsPage() {
       byWeekday[d].sales += Number(e.sales || 0);
       byWeekday[d].count += 1;
     }
-    // Heatmap: last 16 weeks (columns = weeks, rows = weekdays). Missing workdays = hatched, registered zero = zero.
-    const today = todayISO();
-    const start = addDays(today, -((16 * 7) - 1));
-    const monday = addDays(start, -((new Date(start + 'T00:00:00Z').getUTCDay() + 6) % 7));
-    const byDate = new Map(entries.map((e) => [e.entry_date, e]));
-    const heat: { date: string; state: 'none' | 'miss' | 'zero' | 'on' | 'hot'; sales: number }[] = [];
-    for (let d = monday; d <= today; d = addDays(d, 1)) {
-      const e = byDate.get(d);
-      if (!e) heat.push({ date: d, state: isWorkday(d) && d <= today ? 'miss' : 'none', sales: 0 });
-      else if (Number(e.sales) === 0) heat.push({ date: d, state: 'zero', sales: 0 });
-      else heat.push({ date: d, state: Number(e.sales) >= ms.avgPerWorkday! * 1.2 ? 'hot' : 'on', sales: Number(e.sales) });
-    }
-    const maxHeat = Math.max(1, ...heat.map((h) => h.sales));
-    return { ms, weeks, months, split, byWeekday, heat, maxHeat };
+    const insights = buildInsights(entries, subject.goals, todayISO());
+    return { ms, weeks, months, split, byWeekday, insights };
   }, [subject]);
 
   if (loading) return <div><Skeleton height={64} /><div className="grid g-4" style={{ marginTop: 16 }}>{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={90} />)}</div></div>;
   if (!data || !stats || !subject) return <div className="card"><h3>Ingen statistik</h3><p className="card-note">Det finns inga registreringar att visa ännu.</p></div>;
 
-  const { ms, weeks, months, split, byWeekday, heat, maxHeat } = stats;
+  const { ms, weeks, months, split, byWeekday, insights } = stats;
   const entries = subject.entries;
   const bw = bestWeek(entries);
   const pr = personalRecord(entries);
@@ -123,6 +112,10 @@ export default function StatsPage() {
         <div className="stat-tile"><span>Snitt-TB totalt</span><b>{lifetimeSales ? fmtMoney(lifetimeTb / lifetimeSales) : '–'}</b><small>{lifetimeHours ? `${f1(lifetimeSales / lifetimeHours)} sälj/h totalt` : 'Inga timmar'}</small></div>
       </div>
 
+      <div style={{ marginBottom: 14 }}>
+        <InsightsCard insights={insights} limit={4} kicker="MÖNSTER · ALLTID" title={`${subject.display_name}s insikter`} />
+      </div>
+
       <div className="grid g-2" style={{ marginBottom: 14 }}>
         <div className="card">
           <div className="card-head"><div><div className="card-kicker">12 VECKOR</div><h3>Veckoförsäljning</h3></div><Badge tone="mint">Sälj / vecka</Badge></div>
@@ -143,25 +136,8 @@ export default function StatsPage() {
         </div>
 
         <div className="card">
-          <div className="card-head"><div><div className="card-kicker">16 VECKOR · KALENDER</div><h3>Aktivitetskarta</h3></div></div>
-          <div style={{ overflowX: 'auto' }}>
-            <div className="heat" style={{ gridTemplateRows: 'repeat(7, 14px)', gridAutoColumns: 'minmax(12px, 1fr)', minWidth: 320 }}>
-              {heat.map((h) => (
-                <div
-                  key={h.date}
-                  className={`cell ${h.state === 'miss' ? 'zero' : h.state === 'zero' ? 'zero' : h.state === 'none' ? '' : h.state === 'hot' ? 'hot' : h.state === 'on' ? 'on' : ''}`}
-                  title={`${h.date}: ${h.state === 'miss' ? 'ej registrerad' : h.state === 'zero' ? '0 sälj (registrerad)' : h.state === 'none' ? 'helg' : `${h.sales} sälj`}`}
-                  style={h.state === 'on' || h.state === 'hot' ? { opacity: 0.45 + (h.sales / maxHeat) * 0.55 } : h.state === 'miss' ? { background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.09) 0 3px, transparent 3px 6px)' } : undefined}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="legend" style={{ marginTop: 10 }}>
-            <span><i style={{ background: 'rgba(94,234,212,0.8)' }} />Hög</span>
-            <span><i style={{ background: 'rgba(94,234,212,0.4)' }} />Låg</span>
-            <span><i style={{ background: 'rgba(255,255,255,0.12)' }} />Registrerad noll</span>
-            <span><i style={{ background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 3px, transparent 3px 6px)' }} />Ej registrerad (räknas inte)</span>
-          </div>
+          <div className="card-head"><div><div className="card-kicker">AKTIVITETSKARTA</div><h3>Dagar mot dagsmålet</h3></div></div>
+          <HeatYear entries={entries} goal={Number(subject.goals.daily_sales || 0)} />
         </div>
       </div>
 

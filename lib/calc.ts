@@ -318,7 +318,7 @@ export function bestWeek(entries: Entry[]): WeekPoint | null {
 /* ------------------------------------------------------------------ *
  * Streaks
  * ------------------------------------------------------------------ */
-function previousWorkday(iso: string): string {
+export function previousWorkday(iso: string): string {
   let d = addDays(iso, -1);
   for (let i = 0; i < 10; i++) {
     if (isWorkday(d)) return d;
@@ -475,6 +475,8 @@ export type MonthStats = MonthAgg & {
   projectionReason: string | null;
   requiredPerRemaining: number | null;
   aheadOfPlan: number | null;
+  /** Workdays still open for selling in the month (today excluded when today is registered). */
+  openWorkdays: number;
   goalPct: number;
   tbGoalPct: number;
   goalGap: number;
@@ -557,6 +559,7 @@ export function buildMonthStats(
     projectionReason,
     requiredPerRemaining,
     aheadOfPlan,
+    openWorkdays,
     goalPct: pct(agg.sales, Number(goals.monthly_sales || 0)),
     tbGoalPct: pct(agg.tb, Number(goals.monthly_tb || 0)),
     goalGap,

@@ -12,7 +12,7 @@ import { CommandPalette } from './command-palette';
 import { ShortcutsModal } from './shortcuts';
 import { useQuickPlus } from './use-quick-plus';
 import { buildCommands, commandsFor, type Command } from '@/lib/command';
-import { buildShareText } from '@/lib/report';
+import { buildShareText, buildWeeklyDigest } from '@/lib/report';
 import { dateLabel, fmt, todayISO } from '@/lib/calc';
 import type { Entry } from '@/lib/types';
 
@@ -98,19 +98,32 @@ export function Shell({ children }: { children: React.ReactNode }) {
     if (!quiet) toast('Siffrorna är uppdaterade.');
   }
 
-  async function copyReport() {
-    if (!data) return toast('Ingen data att kopiera ännu.', 'err');
-    const members = data.team.map((t) => ({
+  function sanitizedMembers() {
+    return (data?.team || []).map((t) => ({
       ...t,
       entries: t.entries.map((e) => ({ ...e, note: null, rating: null, mood: null, tags: [] })) as Entry[],
     }));
-    const text = buildShareText(todayISO().slice(0, 7), members, me);
+  }
+
+  async function copyToClipboard(text: string, okMessage: string) {
     try {
       await navigator.clipboard.writeText(text);
-      toast('Månadsrapporten är kopierad — klistra in i WhatsApp eller Slack.');
+      toast(okMessage);
     } catch {
       toast('Kunde inte kopiera automatiskt.', 'err');
     }
+  }
+
+  async function copyReport() {
+    if (!data) return toast('Ingen data att kopiera ännu.', 'err');
+    const text = buildShareText(todayISO().slice(0, 7), sanitizedMembers(), me);
+    await copyToClipboard(text, 'Månadsrapporten är kopierad — klistra in i WhatsApp eller Slack.');
+  }
+
+  async function copyWeekly() {
+    if (!data) return toast('Ingen data att kopiera ännu.', 'err');
+    const text = buildWeeklyDigest(sanitizedMembers(), me);
+    await copyToClipboard(text, 'Veckobrevet är kopierat — klistra in i WhatsApp eller Slack.');
   }
 
   async function runCommand(c: Command) {
@@ -120,6 +133,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       case 'quick-plus': return void plus();
       case 'refresh': return void refresh();
       case 'copy-report': return void copyReport();
+      case 'copy-weekly': return void copyWeekly();
       case 'toggle-sound': setSound(!sound); return toast(sound ? 'Ljudet är avstängt.' : 'Ljudet är påslaget.', 'info');
       case 'toggle-motion': {
         const next = motionMode === 'studio' ? 'quiet' : 'studio';

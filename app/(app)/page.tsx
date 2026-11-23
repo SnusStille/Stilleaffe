@@ -7,6 +7,10 @@ import { useApp } from '@/components/app-provider';
 import { useQuickPlus } from '@/components/use-quick-plus';
 import { useCountUp } from '@/components/use-count-up';
 import { WeekStrip } from '@/components/week-strip';
+import { InsightsCard } from '@/components/insights-card';
+import { DuelCard } from '@/components/duel-card';
+import { OpenDays } from '@/components/open-days';
+import { buildInsights, buildTeamInsights } from '@/lib/analysis';
 import { TrendChart, dailyPoints } from '@/components/charts';
 import { Icon } from '@/components/icons';
 import { Ring, Progress, Kpi, Badge, Delta, Skeleton, Avatar, Sparkline, CopyButton } from '@/components/ui';
@@ -418,6 +422,27 @@ export default function OverviewPage() {
   const split = productSplit(my.filter((e) => monthOf(e.entry_date) === monthKey));
   const weekTotal = week[week.length - 1]?.sales || 0;
   const isSeller = me.role === 'seller';
+  const insights = useMemo(
+    () => (isSeller ? buildInsights(my, goals) : buildTeamInsights(members, monthKey)),
+    [isSeller, my, goals, members, monthKey],
+  );
+
+  // End-of-day nudge: once per day, sellers only, after 16:00 local time on a workday without a registration.
+  useEffect(() => {
+    if (loading || !isSeller || !data) return;
+    const now = todayISO();
+    if (!isWorkday(now) || my.some((e) => e.entry_date === now)) return;
+    const hour = new Date().getHours();
+    if (hour < 16) return;
+    const key = `ll_nudge_${now}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
+    } catch { return; }
+    const t = window.setTimeout(() => toast('Dagen är inte registrerad än – lägg in siffrorna innan du stänger. 📌', 'info'), 1200);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, isSeller, data, my]);
 
   // Celebrate a reached month goal once per month and device.
   useEffect(() => {
@@ -488,6 +513,8 @@ export default function OverviewPage() {
           </>
         }
       />
+
+      {isSeller && <OpenDays entries={my} onPick={(date) => openRegister({ date })} />}
 
       <div className="kpi-grid rise" style={{ marginBottom: 14 }}>
         <Kpi label={isSeller ? 'Sälj denna månad' : 'Teamets sälj'} value={<CountUp value={isSeller ? stats.sales : team.sales} />} sub={isSeller ? `mål ${fmt(goals.monthly_sales)} · ${stats.goalPct}%` : `mål ${fmt(team.goal)} · ${team.goalPct}%`} tone="mint" trend={t7.pct != null ? (t7.pct >= 0 ? 'up' : 'down') : undefined} />
@@ -634,6 +661,11 @@ export default function OverviewPage() {
           </div>
         </>
       )}
+
+      <div className="grid g-2 rise rise-5" style={{ marginTop: 14 }}>
+        <InsightsCard insights={insights} kicker={isSeller ? 'MÖNSTER I DINA SIFFROR' : 'VAD TEAMETS SIFFROR SÄGER'} title={isSeller ? 'Insikter' : 'Teaminsikter'} />
+        <DuelCard members={members} today={todayISO()} highlight={me.username} />
+      </div>
     </div>
   );
 }

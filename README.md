@@ -9,6 +9,13 @@ fyra konton med rollbaserad åtkomst, registrering per säljare och dag, produkt
 radering (inga webbläsardialoger), riktiga diagram med hover, målkalender, prestationer, uppläsning av
 manus med webbläsarens svenska röst, kopieringsklar månadsrapport och kortkommandon (`?` visar alla).
 
+**v1.3-intelligensen (allt beräknat lokalt, ingen AI):** **Insikter** – regelbaserade mönster med bevis
+(takt, täckning, bästa veckodag, momentum efter målträff, KK-andel, TB/sälj, stabilitet) för säljare och
+chefer; **Veckoduellen** – säljare mot säljare dag för dag med åtta veckors historik; **Prognossimulator**
+– "vad händer om X sälj per arbetsdag?"; **Öppna dagar** – klickbara påminnelser för arbetsdagar utan
+registrering; **Aktivitetskarta** 16 veckor/1 år relativt dagsmålet; **Veckobrev** för chefer (kopieras
+som text); **Mina data** (JSON-export) och utskriftsvänlig månadsrapport (`Cmd/Ctrl+P`).
+
 ## Snabbstart lokalt (Node.js 22.x)
 
 1. `npm install`
@@ -85,7 +92,7 @@ tests/                   vitest: beräkningar, behörigheter, sessioner, Spelgui
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # 83 tester: datum/kalender, takt & prognos, ranking, produktuppdelning, CSV, prestationer, scrypt, sessioner, route-behörighet, Spelguide, kommandopalett, rapport, coach-prompter, UI (jsdom)
+npm test            # 115 tester: datum/kalender, takt & prognos, ranking, produktuppdelning, CSV, prestationer, scrypt, sessioner, route-behörighet, Spelguide, kommandopalett, rapporter, coach-prompter, insikter/duell/planner/heatmap, UI (jsdom)
 npm run build
 bash scripts/e2e-local.sh   # 63 kontroller mot lokal server + mock: alla fyra inloggningar, Fredland == Affe, Kvist == Stille, samma datum för två säljare, RLS på route-nivå
 ```

@@ -7,7 +7,9 @@ import { Icon } from '@/components/icons';
 import { Avatar, Badge, Card, Empty, Kpi, Progress, Skeleton } from '@/components/ui';
 import { useAi } from '@/components/use-ai';
 import { CommentsThread } from '@/components/comments-thread';
-import { buildLeaderboard, buildMonthStats, currentMonthKey, f1, fmt, fmtMoney, pct, teamStats, type Entry, type TeamMember } from '@/lib/calc';
+import { DuelCard } from '@/components/duel-card';
+import { buildWeeklyDigest } from '@/lib/report';
+import { buildLeaderboard, buildMonthStats, currentMonthKey, f1, fmt, fmtMoney, pct, teamStats, todayISO, type Entry, type TeamMember } from '@/lib/calc';
 import { managerTeamPrompt, paceText } from '@/lib/coach';
 
 export default function TeamPage() {
@@ -24,6 +26,17 @@ export default function TeamPage() {
   const leader = useMemo(() => buildLeaderboard(members, monthKey), [members, monthKey]);
   const team = useMemo(() => teamStats(members, monthKey), [members, monthKey]);
   const isManager = me.role === 'manager';
+
+  async function shareWeekly() {
+    if (!data) return;
+    const text = buildWeeklyDigest(members, me);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Veckobrevet är kopierat — klistra in i WhatsApp eller Slack.');
+    } catch {
+      toast('Kunde inte kopiera automatiskt.', 'err');
+    }
+  }
 
   async function analyze() {
     const res = await ask([{ role: 'user', content: managerTeamPrompt(team) }]);
@@ -72,6 +85,7 @@ export default function TeamPage() {
           </p>
         </div>
         <div className="page-head-actions">
+          {isManager && <button className="btn btn-primary" onClick={shareWeekly} title="Kopiera veckans sammanfattning för teamet"><Icon name="trophy" size={15} /> Kopiera veckobrev</button>}
           <Link href="/month" className="btn"><Icon name="month" size={15} /> Månadsresultat</Link>
           <Link href="/comments" className="btn btn-ghost"><Icon name="comments" size={15} /> Kommentarer</Link>
         </div>
@@ -84,6 +98,10 @@ export default function TeamPage() {
         <Kpi label="Månadsledare" value={team.leader ? team.leader.display_name : '–'} sub={team.leader ? `${fmt(team.leader.sales)} sälj` : 'Ingen registrering'} tone="gold" />
         <Kpi label="Prognos" value={team.projection != null ? fmt(team.projection) : '–'} sub={team.projectionReliable ? 'Tillförlitligt underlag' : 'Tunt underlag'} tone="violet" />
         <Kpi label="Arbetsdagar kvar" value={String(team.remainingWorkdays)} sub={`${team.elapsedWorkdays} passerade`} />
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <DuelCard members={members} today={todayISO()} highlight={me.username} />
       </div>
 
       <div className="grid g-2" style={{ marginBottom: 14 }}>

@@ -10,6 +10,7 @@ export const SHORTCUTS: { keys: string[]; label: string; where?: string; sellerO
   { keys: ['R'], label: 'Uppdatera siffrorna', where: 'Överallt' },
   { keys: ['?'], label: 'Visa kortkommandon', where: 'Överallt' },
   { keys: ['/'], label: 'Sök i Spelguiden', where: 'Spelguiden' },
+  { keys: ['mod', 'Enter'], label: 'Spara registreringen (trycks samtidigt)', where: 'Registreringsdialogen', sellerOnly: true },
   { keys: ['Esc'], label: 'Stäng dialog eller palett', where: 'Överallt' },
 ];
 

@@ -164,7 +164,7 @@ export function StackedBar({ segments, height = 12 }: { segments: { value: numbe
   );
 }
 
-export function Avatar({ name, role, size = 'md' }: { name: string; role?: string; size?: 'sm' | 'md' | 'lg' }) {
+export function Avatar({ name, role, size = 'md' }: { name: string; role?: string; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
   const initials = name.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
   return <div className={`avatar ${role === 'manager' ? 'manager' : ''} ${size === 'md' ? '' : size}`}>{initials}</div>;
 }

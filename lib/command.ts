@@ -7,6 +7,7 @@ export type CommandAction =
   | { type: 'quick-plus' }
   | { type: 'refresh' }
   | { type: 'copy-report' }
+  | { type: 'copy-weekly' }
   | { type: 'toggle-sound' }
   | { type: 'toggle-motion' }
   | { type: 'shortcuts' }
@@ -56,6 +57,7 @@ export function buildCommands(): Command[] {
     { id: 'act:quick-plus', label: '+1 sälj idag', group: 'Åtgärder', icon: 'zap', action: { type: 'quick-plus' }, keywords: 'snabb plus lägg till en snabbt', role: 'seller' },
     { id: 'act:refresh', label: 'Uppdatera siffrorna', group: 'Åtgärder', icon: 'refresh', action: { type: 'refresh' }, keywords: 'ladda om refresh hämta', hint: 'R' },
     { id: 'act:copy-report', label: 'Kopiera månadsrapport', group: 'Åtgärder', icon: 'copy', action: { type: 'copy-report' }, keywords: 'dela whatsapp sammanfattning text rapport' },
+    { id: 'act:copy-weekly', label: 'Kopiera veckobrev', group: 'Åtgärder', icon: 'trophy', action: { type: 'copy-weekly' }, keywords: 'vecka veckorapport sammanfattning dela chef duell vinnare', role: 'manager' },
     { id: 'act:shortcuts', label: 'Visa kortkommandon', group: 'Åtgärder', icon: 'keyboard', action: { type: 'shortcuts' }, keywords: 'hjälp tangentbord shortcuts', hint: '?' },
     { id: 'act:guide-bk', label: 'Sök Spelguide: Brandkollen', group: 'Spelguide', icon: 'guide', action: { type: 'guide-search', query: 'brandkollen' }, keywords: 'rök larm detektor' },
     { id: 'act:guide-kk', label: 'Sök Spelguide: Konsumentkollen', group: 'Spelguide', icon: 'guide', action: { type: 'guide-search', query: 'konsumentkollen' }, keywords: 'personnummer bevakning identitet' },

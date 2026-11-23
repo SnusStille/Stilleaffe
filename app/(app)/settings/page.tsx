@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useApp } from '@/components/app-provider';
 import { Icon } from '@/components/icons';
 import { Avatar, Badge, Card, Skeleton } from '@/components/ui';
-import { initials } from '@/lib/calc';
+import { initials, downloadText, todayISO } from '@/lib/calc';
 
 type Health = {
   ok?: boolean;
@@ -29,6 +29,20 @@ export default function SettingsPage() {
   const [ai, setAi] = useState<{ configured: boolean; source: string | null } | null>(null);
   const [users, setUsers] = useState<{ username: string; display_name: string; role: string; is_active?: boolean }[] | null>(null);
   const isManager = me.role === 'manager';
+
+  /** GDPR-style export: everything the server holds about the signed-in account, as a file. */
+  function exportMyData() {
+    if (!data) return;
+    const payload = {
+      exported_at: new Date().toISOString(),
+      account: data.me,
+      goals: data.team.find((t) => t.username === me.username)?.goals ?? null,
+      entries: data.myEntries,
+      activity_about_me: data.activity.filter((a) => a.actor_username === me.username),
+    };
+    downloadText(`label-lab-${me.username}-${todayISO()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    toast('Dina data är nedladdade som JSON.');
+  }
 
   useEffect(() => {
     fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' })
@@ -91,6 +105,7 @@ export default function SettingsPage() {
                 <div style={{ fontSize: 17, fontWeight: 720, letterSpacing: '-0.02em' }}>{me.display_name}</div>
                 <div className="card-note">@{me.username} · inloggad med säker session (HttpOnly, 12 h)</div>
               </div>
+              <button className="btn btn-sm" onClick={exportMyData} title="Ladda ner allt som sparas om ditt konto som JSON"><Icon name="download" size={14} /> Mina data</button>
               <button className="btn btn-danger btn-sm" onClick={logout}><Icon name="logout" size={14} /> Logga ut</button>
             </div>
             <div className="metric-row" style={{ marginTop: 10 }}><span>Roll</span><b>{isManager ? 'Chef — ser hela teamet, skrivskyddad säljdata' : 'Säljare — egna registreringar och mål'}</b></div>

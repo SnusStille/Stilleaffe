@@ -7,6 +7,8 @@ import { Icon } from '@/components/icons';
 import { Avatar, Badge, Card, Delta, Empty, Kpi, Progress, Ring, Skeleton, Sparkline, StackedBar } from '@/components/ui';
 import { TrendChart, dailyPoints } from '@/components/charts';
 import { buildShareText } from '@/lib/report';
+import { PlannerCard } from '@/components/planner-card';
+import type { PlannerRow } from '@/lib/analysis';
 import {
   bestWeek,
   buildLeaderboard,
@@ -502,6 +504,19 @@ export default function MonthPage() {
           <div className="grid g-2" style={{ marginBottom: 14 }}>
             {leader.map((r) => <PaceCard key={r.username} row={r} />)}
           </div>
+
+          {current && leader.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <PlannerCard
+                rows={leader.map((r) => ({ key: r.username, label: r.display_name, sales: r.sales, tb: r.tb, avgTbPerSale: r.avgTbPerSale, openWorkdays: r.openWorkdays, days: r.registeredWorkdays })) as PlannerRow[]}
+                goalSales={team.goal}
+                goalTb={team.tbGoal}
+                dailySales={leader.reduce((s, r) => s + Number(r.goals.daily_sales || 0), 0) / leader.length}
+                dailyTb={leader.reduce((s, r) => s + Number(r.goals.daily_tb || 0), 0) / leader.length}
+                subject={data.me.role === 'seller' ? 'du' : 'teamet'}
+              />
+            </div>
+          )}
 
           <div className="card">
             <div className="card-head">

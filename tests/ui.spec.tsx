@@ -7,6 +7,12 @@ import { WeekStrip } from '@/components/week-strip';
 import { TrendChart } from '@/components/charts';
 import { CommandPalette } from '@/components/command-palette';
 import { buildCommands, commandsFor } from '@/lib/command';
+import { InsightsCard } from '@/components/insights-card';
+import { DuelCard } from '@/components/duel-card';
+import { PlannerCard } from '@/components/planner-card';
+import { OpenDays } from '@/components/open-days';
+import { HeatYear } from '@/components/heat-year';
+import type { Insight } from '@/lib/analysis';
 import { todayISO, weekMonday, type Entry, type Goals } from '@/lib/calc';
 
 const GOALS: Goals = { daily_sales: 7, daily_tb: 3000, weekly_sales: 35, weekly_tb: 15000, monthly_sales: 140, monthly_tb: 60000 };
@@ -163,5 +169,92 @@ describe('<CommandPalette/>', () => {
     const input2 = screen.getByLabelText('Sök kommandon');
     fireEvent.change(input2, { target: { value: 'zzzz' } });
     expect(screen.getByText(/Inget matchar/)).toBeTruthy();
+  });
+});
+
+const WED = '2026-11-25';
+const member = (u: string, role: 'seller' | 'manager', rows: [string, number][]) => ({ username: u, display_name: u[0].toUpperCase() + u.slice(1), role, goals: GOALS, entries: rows.map(([d, v], i) => entry(d, v, { id: i + 1, seller_username: u })) });
+const insight = (id: string, tone: Insight['tone'] = 'info'): Insight => ({ id, tone, emoji: '💡', title: `Titel ${id}`, body: `Body ${id}`, weight: 1 });
+
+describe('<InsightsCard/>', () => {
+  it('shows the top three, expands on request and explains when there is nothing yet', () => {
+    const list = ['a', 'b', 'c', 'd', 'e'].map((x) => insight(x));
+    const { container, getByText, queryByText } = render(<InsightsCard insights={list} />);
+    expect(container.querySelectorAll('.insight')).toHaveLength(3);
+    expect(queryByText('Titel d')).toBeNull();
+    fireEvent.click(getByText('Visa alla 5'));
+    expect(container.querySelectorAll('.insight')).toHaveLength(5);
+    cleanup();
+    render(<InsightsCard insights={[]} />);
+    expect(getByText(/Fortsätt registrera/)).toBeTruthy();
+  });
+});
+
+describe('<DuelCard/>', () => {
+  it('explains that a duel needs two sellers', () => {
+    render(<DuelCard members={[member('stille', 'seller', [['2026-11-23', 5]])]} today={WED} />);
+    expect(screen.getByText(/bara en säljare/)).toBeTruthy();
+  });
+  it('renders the headline, seven day columns, scores and eight history dots', () => {
+    const { container } = render(
+      <DuelCard today={WED} highlight="stille" members={[member('stille', 'seller', [['2026-11-23', 5], ['2026-11-24', 7], ['2026-11-25', 3]]), member('kvist', 'seller', [['2026-11-23', 5], ['2026-11-24', 4]])]} />,
+    );
+    expect(screen.getByText('Stille leder med 6 sälj')).toBeTruthy();
+    expect(container.querySelectorAll('.duel-day')).toHaveLength(7);
+    expect(container.querySelectorAll('.duel-day.future')).toHaveLength(4);
+    expect(container.querySelectorAll('.duel-crown')).toHaveLength(1); // Tuesday only
+    expect(container.querySelectorAll('.duel-cell.win')).toHaveLength(1);
+    expect(container.querySelectorAll('.duel-dot')).toHaveLength(8);
+    expect(screen.getByText('du')).toBeTruthy();
+    expect(container.querySelector('.duel-foot')!.textContent).toContain('Stille 1 · Kvist 0');
+  });
+});
+
+describe('<PlannerCard/>', () => {
+  const rows = [{ key: 'stille', label: 'Stille', sales: 100, tb: 40000, avgTbPerSale: 400, openWorkdays: 10, days: 20 }];
+  it('starts at the pace the goal requires and reacts to the slider and presets', () => {
+    const { container } = render(<PlannerCard rows={rows} goalSales={140} goalTb={56000} dailySales={7} dailyTb={3000} />);
+    const range = screen.getByLabelText('Sälj per arbetsdag framöver') as HTMLInputElement;
+    expect(range.value).toBe('4'); // (140 − 100) / 10
+    expect(screen.getByText('140')).toBeTruthy(); // 100 + 4 × 10 = exactly the goal
+    expect(container.querySelector('.planner-verdict')!.className).toContain('reached');
+    fireEvent.change(range, { target: { value: '1' } });
+    expect(screen.getByText('110')).toBeTruthy();
+    expect(container.querySelector('.planner-verdict')!.className).toContain('short');
+    fireEvent.click(screen.getByText('Dagsmål · 7'));
+    expect((screen.getByLabelText('Sälj per arbetsdag framöver') as HTMLInputElement).value).toBe('7');
+  });
+  it('says so when there is nothing left to simulate', () => {
+    render(<PlannerCard rows={[{ ...rows[0], openWorkdays: 0 }]} goalSales={140} goalTb={56000} dailySales={7} dailyTb={3000} />);
+    expect(screen.getByText(/Inga arbetsdagar kvar/)).toBeTruthy();
+  });
+});
+
+describe('<OpenDays/>', () => {
+  it('is silent when the seller is caught up and offers the missing days otherwise', () => {
+    const { container } = render(<OpenDays entries={[entry('2026-11-24', 1), entry('2026-11-23', 1)]} today={WED} lookback={2} onPick={() => {}} />);
+    expect(container.querySelector('.open-days')).toBeNull();
+    const onPick = vi.fn();
+    render(<OpenDays entries={[entry('2026-11-24', 1)]} today={WED} lookback={4} onPick={onPick} />);
+    expect(screen.getByText('3 arbetsdagar utan registrering')).toBeTruthy();
+    const chips = screen.getAllByRole('button').filter((b) => b.className.includes('open-day'));
+    expect(chips.map((c) => c.textContent!.trim())).toEqual(['mån 23 nov', 'fre 20 nov', 'tors 19 nov']); // window Nov 24–19; Nov 24 is registered
+    fireEvent.click(chips[0]);
+    expect(onPick).toHaveBeenCalledWith('2026-11-23');
+  });
+});
+
+describe('<HeatYear/>', () => {
+  it('draws a 53-week grid, toggles to 16 weeks and marks states', () => {
+    const { container } = render(<HeatYear entries={[entry('2026-11-25', 7), entry('2026-11-24', 0)]} goal={7} today={WED} />);
+    expect(container.querySelectorAll('.hy-cell')).toHaveLength(53 * 7);
+    expect(container.querySelectorAll('.hy-cell.future')).toHaveLength(4);
+    expect(container.querySelector('[data-date="2026-11-25"]')!.className).toContain('l3');
+    expect(container.querySelector('[data-date="2026-11-24"]')!.className).toContain('zero');
+    expect(container.querySelector('[data-date="2026-11-23"]')!.className).toContain('miss');
+    expect(container.querySelector('[data-date="2026-11-21"]')!.className).toContain('none');
+    expect(container.querySelector('.hy-months')!.textContent).toContain('nov');
+    fireEvent.click(screen.getByText('16 veckor'));
+    expect(container.querySelectorAll('.hy-cell')).toHaveLength(16 * 7);
   });
 });
