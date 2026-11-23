@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv" style={{ colorScheme: 'dark' }}>
       <body>
-        <div className="bg-ambient" aria-hidden="true">
+        <div className="bg_ambient" aria-hidden="true">
           <span className="bg_glow bg_glow-a" />
           <span className="bg_glow bg_glow-b" />
           <span className="bg_glow bg_glow-c" />

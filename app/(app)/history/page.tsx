@@ -49,6 +49,7 @@ export default function HistoryPage() {
   const [monthKey, setMonthKey] = useState<string>('');
   const [seller, setSeller] = useState<string>(me.username);
   const [editing, setEditing] = useState<Entry | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<number | null>(null);
   const isManager = me.role === 'manager';
 
   const rows: Row[] = useMemo(() => {
@@ -92,7 +93,12 @@ export default function HistoryPage() {
   if (!data) return <div className="card"><h3>Kunde inte ladda historiken</h3></div>;
 
   async function remove(id: number) {
-    if (!confirm('Ta bort registreringen? Åtgärden loggas i ändringshistoriken.')) return;
+    if (pendingDelete !== id) {
+      setPendingDelete(id);
+      window.setTimeout(() => setPendingDelete((p) => (p === id ? null : p)), 4000);
+      return;
+    }
+    setPendingDelete(null);
     const res = await fetch('/api/entries', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -163,7 +169,9 @@ export default function HistoryPage() {
                 {!isManager && (
                   <div className="row" style={{ gap: 4 }}>
                     <button className="btn btn-sm btn-ghost" onClick={() => setEditing(e as Entry)} aria-label="Redigera"><Icon name="edit" size={13} /></button>
-                    <button className="btn btn-sm btn-danger" onClick={() => remove(e.id)} aria-label="Ta bort"><Icon name="trash" size={13} /></button>
+                    <button className={`btn btn-sm ${pendingDelete === e.id ? 'btn-danger solid' : 'btn-danger btn-ghost'}`} onClick={() => remove(e.id)} aria-label={pendingDelete === e.id ? 'Bekräfta borttagning' : 'Ta bort'} title={pendingDelete === e.id ? 'Tryck igen för att ta bort' : 'Ta bort'}>
+                      {pendingDelete === e.id ? 'Säker?' : <Icon name="trash" size={13} />}
+                    </button>
                   </div>
                 )}
               </div>
@@ -174,7 +182,7 @@ export default function HistoryPage() {
       </div>
 
       <Modal open={!!editing} onClose={() => setEditing(null)} title={editing && editing.id ? 'Redigera registrering' : 'Ny registrering'} width={720}>
-        {editing && <EntryForm initial={editing.id ? editing : null} onSaved={() => { setEditing(null); void reload(); }} onCancel={() => setEditing(null)} />}
+        {editing && <EntryForm key={`${editing.id}-${editing.entry_date}`} initial={editing.id ? editing : null} date={editing.entry_date} onSaved={() => { setEditing(null); void reload(); }} onCancel={() => setEditing(null)} />}
       </Modal>
     </div>
   );

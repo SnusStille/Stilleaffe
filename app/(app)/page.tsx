@@ -4,9 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useApp } from '@/components/app-provider';
-import { EntryForm } from '@/components/entry-form';
+import { useQuickPlus } from '@/components/use-quick-plus';
+import { useCountUp } from '@/components/use-count-up';
+import { WeekStrip } from '@/components/week-strip';
+import { TrendChart, dailyPoints } from '@/components/charts';
 import { Icon } from '@/components/icons';
-import { Modal, Ring, Progress, Kpi, Badge, Delta, Skeleton, Avatar, Sparkline } from '@/components/ui';
+import { Ring, Progress, Kpi, Badge, Delta, Skeleton, Avatar, Sparkline, CopyButton } from '@/components/ui';
 import { useAi } from '@/components/use-ai';
 import {
   ACHIEVEMENTS,
@@ -31,14 +34,16 @@ import {
   weekMonday,
   weeklySeries,
   weekdayShort,
+  weekToDate,
   type MonthStats,
   type Entry,
   type Goals,
   type TeamMember,
   type Activity,
 } from '@/lib/calc';
-import { coachHeadline, managerTeamPrompt, paceText, sellerPlanPrompt } from '@/lib/coach';
-import { chime, haptic, beep } from '@/lib/audio';
+import { coachHeadline, managerTeamPrompt, paceText, sellerPlanPrompt, motivatePrompt, weekReviewPrompt, supportPrompt } from '@/lib/coach';
+import { buildShareText } from '@/lib/report';
+import { chime, haptic, confetti } from '@/lib/audio';
 import { SceneBoundary, webglAvailable } from '@/components/three/scene-boundary';
 
 const PerformanceEngine = dynamic(() => import('@/components/three/performance-engine'), {
@@ -57,6 +62,11 @@ function useEngineReady() {
     return () => window.clearTimeout(id);
   }, []);
   return ready;
+}
+
+function CountUp({ value, format = fmt }: { value: number; format?: (n: number) => string }) {
+  const v = useCountUp(value);
+  return <>{format(v)}</>;
 }
 
 function PageHead({ title, sub, actions }: { title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode }) {
@@ -101,13 +111,28 @@ function ActivityFeed({ activity }: { activity: Activity[] }) {
   );
 }
 
-function CoachPanel({ seller, stats, todayRow, goals, team }: { seller: boolean; stats: MonthStats; todayRow?: Entry; goals: Goals; team?: ReturnType<typeof teamStats> }) {
+type QuickPrompt = { label: string; prompt: string };
+
+function CoachPanel({ seller, stats, todayRow, goals, team, entries }: { seller: boolean; stats: MonthStats; todayRow?: Entry; goals: Goals; team?: ReturnType<typeof teamStats>; entries: Entry[] }) {
   const { ask, busy, error } = useAi();
+  const { toast } = useApp();
   const [aiText, setAiText] = useState('');
+  const [which, setWhich] = useState<string | null>(null);
   const headline = coachHeadline(stats, todayRow, goals);
-  const run = async () => {
-    const prompt = seller ? sellerPlanPrompt(stats, todayRow, goals) : managerTeamPrompt(team!);
-    const res = await ask([{ role: 'user', content: prompt }]);
+  const quicks: QuickPrompt[] = seller
+    ? [
+        { label: 'Gör min plan', prompt: sellerPlanPrompt(stats, todayRow, goals) },
+        { label: 'Motivera mig', prompt: motivatePrompt(stats, todayRow, goals) },
+        { label: 'Analysera veckan', prompt: weekReviewPrompt(entries, goals) },
+      ]
+    : [
+        { label: 'Analysera teamet', prompt: managerTeamPrompt(team!) },
+        { label: 'Vem behöver stöd?', prompt: supportPrompt(team!) },
+        { label: 'Veckans lägesbild', prompt: `${managerTeamPrompt(team!)} Avsluta med en kort lägesbild i tre punkter som jag kan skicka till ledningen.` },
+      ];
+  const run = async (q: QuickPrompt) => {
+    setWhich(q.label);
+    const res = await ask([{ role: 'user', content: q.prompt }]);
     if (res.text) setAiText(res.text);
   };
   return (
@@ -125,56 +150,62 @@ function CoachPanel({ seller, stats, todayRow, goals, team }: { seller: boolean;
         <div><span>Takt</span><b>{stats.avgPerWorkday == null ? '–' : f1(stats.avgPerWorkday)}<small> sälj/dag</small></b></div>
         <div><span>{stats.paceReliable ? (stats.remainingWorkdays > 0 ? 'Behövs/dag' : 'Kvar') : 'Täckning'}</span><b>{stats.paceReliable ? (stats.remainingWorkdays > 0 ? f1(stats.requiredPerRemaining ?? 0) : fmt(stats.goalGap)) : `${stats.registeredWorkdays}/${stats.elapsedWorkdays}`}</b></div>
       </div>
-      {aiText && <div className="coach-ai"><div className="lbl">✦ AI-COACH</div><p>{aiText}</p></div>}
+      <div className="chip-row" style={{ marginTop: 12 }}>
+        {quicks.map((q) => (
+          <button key={q.label} className={`chip-btn ${which === q.label && busy ? 'on' : ''}`} onClick={() => run(q)} disabled={busy}>
+            <Icon name="sparkles" size={12} /> {busy && which === q.label ? 'AI:n läser data…' : q.label}
+          </button>
+        ))}
+      </div>
+      {aiText && <div className="coach-ai rise"><div className="lbl">✦ AI-COACH</div><p>{aiText}</p><div className="row" style={{ marginTop: 8, justifyContent: 'flex-end' }}><CopyButton text={aiText} label="Kopiera" /></div></div>}
       {error && <div className="error-text" style={{ marginTop: 10 }}>{error}</div>}
       <div className="row" style={{ marginTop: 14 }}>
-        <button className="btn btn-primary" onClick={run} disabled={busy}>
-          <Icon name="sparkles" size={15} /> {busy ? 'AI:n läser data…' : seller ? 'Be AI göra min plan' : 'Be AI analysera teamet'}
-        </button>
-        <Link href="/ai" className="btn btn-ghost">Öppna AI-coach</Link>
+        <Link href="/ai" className="btn btn-ghost">Öppna AI-coach <Icon name="arrow-right" size={14} /></Link>
+        {!aiText && !busy && <span className="card-note">AI:n föreslår bara — du bestämmer.</span>}
+        {busy && !aiText && <span className="card-note">Läser registreringar…</span>}
       </div>
+      {aiText && <button className="link" style={{ marginTop: 6 }} onClick={() => { setAiText(''); setWhich(null); }}>Stäng svaret</button>}
     </div>
   );
 }
 
-function TodayHero({ stats, todayRow, goals, onRegister, onQuick }: { stats: MonthStats; todayRow?: Entry; goals: Goals; onRegister: () => void; onQuick: () => void }) {
+function TodayHero({ stats, todayRow, goals, entries, streak, onRegister }: { stats: MonthStats; todayRow?: Entry; goals: Goals; entries: Entry[]; streak: number; onRegister: (date: string, entry: Entry | null) => void }) {
   const has = !!todayRow;
   const value = has ? pct(Number(todayRow.sales), goals.daily_sales) : 0;
   const split = has ? productSplit([todayRow]) : null;
+  const goalHit = has && Number(todayRow.sales) >= goals.daily_sales;
   return (
-    <div className="card accent" style={{ padding: 24 }}>
-      <div className="card-kicker">DAGENS RESULTAT · {dateLabel(todayISO())}</div>
-      <div className="hero-today" style={{ marginTop: 8 }}>
-        <Ring value={value} size={150} stroke={12} label={has ? `${Number(todayRow.sales)}` : '–'} sub={has ? `av ${goals.daily_sales}` : 'ej registrerat'} />
+    <div className={`card accent hero ${goalHit ? 'hero-hit' : ''}`} style={{ padding: 24 }}>
+      <div className="row-between">
+        <div className="card-kicker">DAGENS RESULTAT · {dateLabel(todayISO()).toUpperCase()}</div>
+        {streak > 0 && <span className="badge gold" title="Dagar i rad med registrering"><Icon name="flame" size={12} /> {streak} dagar i rad</span>}
+      </div>
+      <div className="hero-today" style={{ marginTop: 10 }}>
+        <Ring value={value} size={156} stroke={13} label={has ? `${Number(todayRow.sales)}` : '–'} sub={has ? `av ${goals.daily_sales}` : 'ej registrerat'} tone={goalHit ? 'gold' : 'mint'} />
         <div>
-          <div className="big-number">
-            {has ? fmt(Number(todayRow.sales)) : 'Ej registrerat'}
+          <div className="big-number hero-number">
+            {has ? <CountUp value={Number(todayRow.sales)} /> : 'Ej registrerat'}
             {has && <small> sälj idag</small>}
           </div>
+          {goalHit && <div className="hero-flag"><Icon name="check-circle" size={13} /> Dagsmålet är nått</div>}
           <div className="row" style={{ marginTop: 10, gap: 18 }}>
             <div><div className="card-kicker">TB IDAG</div><b style={{ fontSize: 15 }}>{has ? fmtMoney(Number(todayRow.tb_sek)) : '–'}</b></div>
             <div><div className="card-kicker">MÅNAD</div><b style={{ fontSize: 15 }}>{fmt(stats.sales)} <span className="muted" style={{ fontSize: 11 }}>/ {fmt(goals.monthly_sales)}</span></b></div>
             <div><div className="card-kicker">TÄCKNING</div><b style={{ fontSize: 15 }}>{stats.registeredWorkdays}/{stats.elapsedWorkdays} <span className="muted" style={{ fontSize: 11 }}>vardagar</span></b></div>
           </div>
           {has && split && (split.brandSales > 0 || split.konsSales > 0) && (
-            <div className="row" style={{ marginTop: 12, gap: 10 }}>
-              <span className="badge ice">Brandkollen {split.brandSales}</span>
-              <span className="badge mint">Konsumentkollen {split.konsSales}</span>
-            </div>
-          )}
-          {!has && (
-            <div className="note mint" style={{ marginTop: 12 }}>
-              <Icon name="info" size={15} />
-              <span>Dagens siffror är inte registrerade. En saknad dag räknas aldrig som noll.</span>
+            <div className="row" style={{ marginTop: 12, gap: 8 }}>
+              <span className="badge ice"><span className="dot brand" /> Brandkollen {split.brandSales}</span>
+              <span className="badge mint"><span className="dot kons" /> Konsumentkollen {split.konsSales}</span>
             </div>
           )}
           <div className="today-actions">
-            <button className="btn btn-primary" onClick={onRegister}><Icon name="plus" size={15} /> {has ? 'Uppdatera dagen' : 'Registrera dagens siffror'}</button>
-            {has && <button className="btn" onClick={onQuick}><Icon name="plus" size={15} /> +1 sälj</button>}
+            <button className="btn btn-primary" onClick={() => onRegister(todayISO(), todayRow || null)}><Icon name="plus" size={15} /> {has ? 'Uppdatera dagen' : 'Registrera dagens siffror'}</button>
             <Link href="/history" className="btn btn-ghost">Historik</Link>
           </div>
         </div>
       </div>
+      <WeekStrip entries={entries} goals={goals} onPick={onRegister} />
     </div>
   );
 }
@@ -225,7 +256,7 @@ function GoalSnapshot({ goals, stats, todayRow, entries }: { goals: Goals; stats
               <span className="card-note" style={{ textTransform: 'uppercase', letterSpacing: '.08em' }}>{it.label}</span>
               <b style={{ fontSize: 12 }}>{it.value == null ? '–' : fmt(it.value)} / {fmt(it.sales)} sälj <span className="dim">· {it.pct}%</span></b>
             </div>
-            <Progress value={it.pct} />
+            <Progress value={it.pct} tone={it.pct >= 100 ? 'gold' : undefined} />
             <div className="card-note" style={{ marginTop: 4 }}>{it.note} · mål {fmtMoney(it.tb)} TB</div>
           </div>
         ))}
@@ -238,39 +269,18 @@ function GoalSnapshot({ goals, stats, todayRow, entries }: { goals: Goals; stats
   );
 }
 
-function WeekCard({ entries, goals }: { entries: Entry[]; goals: Goals }) {
-  const today = todayISO();
-  const days = useMemo(() => {
-    const out: { key: string; value: number | null }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const key = addDays(today, -i);
-      const row = entries.find((e) => e.entry_date === key);
-      out.push({ key, value: row ? Number(row.sales) : null });
-    }
-    return out;
-  }, [entries, today]);
-  const total = days.reduce((s, d) => s + (d.value || 0), 0);
+function Trend30Card({ entries, goals }: { entries: Entry[]; goals: Goals }) {
+  const points = useMemo(() => dailyPoints(entries, 30, weekdayShort, todayISO()), [entries]);
+  const registered = points.filter((p) => p.value != null).length;
+  const total = points.reduce((s, p) => s + (p.value || 0), 0);
   return (
     <div className="card">
       <div className="card-head">
-        <div><div className="card-kicker">SENASTE 7 DAGARNA</div><h3>{fmt(total)} sälj registrerade</h3></div>
+        <div><div className="card-kicker">SENASTE 30 DAGARNA</div><h3>{fmt(total)} sälj på {registered} registrerade dagar</h3></div>
         <span className="badge">Mål {goals.daily_sales}/dag</span>
       </div>
-      <div className="bars" style={{ height: 150 }}>
-        {days.map((d, i) => {
-          const label = weekdayShort(d.key).replace('.', '');
-          return (
-            <div className="bar-col" key={d.key} title={`${d.key}: ${d.value == null ? 'ej registrerad' : d.value + ' sälj'}`}>
-              <span className="bar-val">{d.value ?? ''}</span>
-              <div className="bar-track">
-                {d.value == null ? <div className="bar miss" style={{ height: '7%' }} /> : <div className={`bar ${d.value === 0 ? 'zero' : ''}`} style={{ height: `${Math.max(4, (d.value / Math.max(1, ...days.map((x) => x.value || 0))) * 100)}%` }} />}
-              </div>
-              <span className="bar-lab">{label}</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="card-note" style={{ marginTop: 10 }}>Streckade staplar = ingen registrering (räknas inte som noll).</div>
+      <TrendChart points={points} goal={goals.daily_sales} height={190} goalLabel="Mål" unit=" sälj" ariaLabel="Sälj per dag de senaste 30 dagarna" />
+      <div className="card-note" style={{ marginTop: 8 }}>Avbrott i linjen = ingen registrering (räknas inte som noll). Håll över kurvan för värden.</div>
     </div>
   );
 }
@@ -312,8 +322,8 @@ function AchievementsCard({ entries, goals, onToast }: { entries: Entry[]; goals
       </div>
       <Progress value={(unlockedList.length / ACHIEVEMENTS.length) * 100} tone="gold" />
       <div className="row" style={{ marginTop: 12, gap: 6 }}>
-        {unlockedList.slice(-8).map((a) => <span key={a.key} className="badge" title={a.desc}>{a.emoji}</span>)}
-        {next.map((a) => <span key={a.key} className="badge" title={a.desc} style={{ opacity: 0.4 }}>·</span>)}
+        {unlockedList.slice(-8).map((a) => <span key={a.key} className="badge badge-xl" title={`${a.name} — ${a.desc}`}>{a.emoji}</span>)}
+        {next.map((a) => <span key={a.key} className="badge badge-xl locked" title={`Låst: ${a.name} — ${a.desc}`}>{a.emoji}</span>)}
       </div>
       <div className="card-note" style={{ marginTop: 10 }}>Nästa: {next[0] ? `${next[0].emoji} ${next[0].name} — ${next[0].desc}` : 'Alla märken är upplåsta!'}</div>
     </div>
@@ -336,7 +346,7 @@ function TeamPulse({ team }: { team: ReturnType<typeof teamStats> }) {
                 <span className="pi-name">{r.display_name}</span>
                 <span className="num" style={{ fontSize: 12, fontWeight: 700 }}>{fmt(r.sales)} sälj</span>
               </div>
-              <div style={{ margin: '6px 0 4px' }}><Progress value={r.goalPct} /></div>
+              <div style={{ margin: '6px 0 4px' }}><Progress value={r.goalPct} tone={r.goalPct >= 100 ? 'gold' : undefined} /></div>
               <small>{r.goalPct}% av mål · {r.registeredWorkdays}/{r.elapsedWorkdays} vardagar registrerade</small>
             </div>
           </div>
@@ -347,7 +357,17 @@ function TeamPulse({ team }: { team: ReturnType<typeof teamStats> }) {
   );
 }
 
-function ManagerReport({ team }: { team: ReturnType<typeof teamStats> }) {
+function ManagerReport({ team, members }: { team: ReturnType<typeof teamStats>; members: { username: string; display_name: string; role: string; goals: Goals; entries: Entry[] }[] }) {
+  const { me, toast } = useApp();
+  async function copy() {
+    const text = buildShareText(currentMonthKey(), members, me);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Rapporten är kopierad — klistra in i WhatsApp eller Slack.');
+    } catch {
+      toast('Kunde inte kopiera automatiskt.', 'err');
+    }
+  }
   return (
     <div className="card">
       <div className="card-head">
@@ -355,14 +375,15 @@ function ManagerReport({ team }: { team: ReturnType<typeof teamStats> }) {
         <Badge tone="violet">Chef</Badge>
       </div>
       <div className="grid g-2">
-        <div><div className="card-kicker">Teamets sälj</div><div className="big-number">{fmt(team.sales)}</div><div className="card-note">av {fmt(team.goal)} i månadsmål</div></div>
-        <div><div className="card-kicker">Teamets TB</div><div className="big-number">{fmt(team.tb)}<small> kr</small></div><div className="card-note">av {fmtMoney(team.tbGoal)}</div></div>
+        <div><div className="card-kicker">Teamets sälj</div><div className="big-number"><CountUp value={team.sales} /></div><div className="card-note">av {fmt(team.goal)} i månadsmål</div></div>
+        <div><div className="card-kicker">Teamets TB</div><div className="big-number"><CountUp value={team.tb / 1000} format={(n) => fmt(n)} /><small> tkr</small></div><div className="card-note">{fmtMoney(team.tb)} av {fmtMoney(team.tbGoal)}</div></div>
       </div>
       <div className="metric-row"><span>Måluppfyllelse</span><b>{team.goalPct}%</b></div>
       <div className="metric-row"><span>Ledare</span><b>{team.leader ? team.leader.display_name : '–'}</b></div>
       <div className="metric-row"><span>Prognos</span><b>{team.projection != null ? fmt(team.projection) + ' sälj' : 'Underlag saknas'}</b></div>
       <div className="row" style={{ marginTop: 14 }}>
         <Link href="/team" className="btn btn-primary">Öppna teamet</Link>
+        <button className="btn" onClick={copy}><Icon name="share" size={15} /> Kopiera rapport</button>
         <Link href="/comments" className="btn btn-ghost">Följ upp</Link>
       </div>
     </div>
@@ -370,8 +391,8 @@ function ManagerReport({ team }: { team: ReturnType<typeof teamStats> }) {
 }
 
 export default function OverviewPage() {
-  const { me, data, loading, error, reload, toast, sound } = useApp();
-  const [registerOpen, setRegisterOpen] = useState(false);
+  const { me, data, loading, error, reload, toast, sound, openRegister } = useApp();
+  const { plus } = useQuickPlus();
   const engineReady = useEngineReady();
   const onToast = useCallback((m: string) => toast(m), [toast]);
 
@@ -390,40 +411,28 @@ export default function OverviewPage() {
   const streak = registeredStreak(my);
   const week = weeklySeries(my, 8);
   const t7 = trend(my, 7);
+  const t30 = trend(my, 30);
+  const wow = weekToDate(my);
   const best = personalRecord(my);
   const hoursMonth = my.filter((e) => monthOf(e.entry_date) === monthKey).reduce((s, e) => s + Number(e.hours || 0), 0);
   const split = productSplit(my.filter((e) => monthOf(e.entry_date) === monthKey));
   const weekTotal = week[week.length - 1]?.sales || 0;
+  const isSeller = me.role === 'seller';
 
-  async function quickPlus() {
-    const row = todayRow;
-    const body: Record<string, unknown> = {
-      action: 'upsert',
-      entry_date: todayISO(),
-      sales: (row?.sales || 0) + 1,
-      tb_sek: row?.tb_sek || 0,
-      hours: row?.hours ?? null,
-      note: row?.note ?? null,
-      mood: row?.mood ?? null,
-      rating: row?.rating ?? null,
-      tags: row?.tags || [],
-    };
-    if (row && (row.brandkollen_sales != null || row.konsumentkollen_sales != null)) {
-      body.brandkollen_sales = row.brandkollen_sales ?? 0;
-      body.konsumentkollen_sales = row.konsumentkollen_sales ?? 0;
-    }
-    const res = await fetch('/api/entries', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify(body),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) return toast(json?.error || 'Kunde inte spara.', 'err');
-    await reload();
-    if (sound) beep(740, 0.08, 'triangle', 0.05);
-    toast('+1 sälj registrerat.');
-  }
+  // Celebrate a reached month goal once per month and device.
+  useEffect(() => {
+    if (loading || !isSeller) return;
+    if (stats.goalPct < 100) return;
+    const key = `ll_celebrated_${monthKey}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
+      confetti(true);
+      if (sound) chime();
+      toast('Månadsmålet är uppnått! 🏆');
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, isSeller, stats.goalPct, monthKey]);
 
   if (loading) {
     return (
@@ -449,7 +458,6 @@ export default function OverviewPage() {
     );
   }
 
-  const isSeller = me.role === 'seller';
   const engineValues = isSeller
     ? Array.from({ length: 7 }, (_, i) => {
         const row = my.find((e) => e.entry_date === addDays(todayISO(), -(6 - i)));
@@ -474,25 +482,26 @@ export default function OverviewPage() {
         }
         actions={
           <>
-            {isSeller && <button className="btn btn-primary" onClick={() => setRegisterOpen(true)}><Icon name="plus" size={15} /> Registrera</button>}
+            {isSeller && <button className="btn btn-primary" onClick={() => openRegister()}><Icon name="plus" size={15} /> Registrera</button>}
+            {isSeller && <button className="btn" onClick={() => plus()} title="+1 sälj idag"><Icon name="zap" size={15} /> +1 sälj</button>}
             <Link href="/month" className="btn">Månadsresultat <Icon name="arrow-right" size={14} /></Link>
           </>
         }
       />
 
-      <div className="kpi-grid" style={{ marginBottom: 14 }}>
-        <Kpi label={isSeller ? 'Sälj denna månad' : 'Teamets sälj'} value={fmt(isSeller ? stats.sales : team.sales)} sub={isSeller ? `mål ${fmt(goals.monthly_sales)} · ${stats.goalPct}%` : `mål ${fmt(team.goal)} · ${team.goalPct}%`} tone="mint" />
-        <Kpi label={isSeller ? 'TB denna månad' : 'Teamets TB'} value={`${fmt((isSeller ? stats.tb : team.tb) / 1000)}k`} sub={`kr · ${isSeller ? `${stats.tbGoalPct}% av mål` : `${team.tbGoalPct}% av mål`}`} tone="ice" />
+      <div className="kpi-grid rise" style={{ marginBottom: 14 }}>
+        <Kpi label={isSeller ? 'Sälj denna månad' : 'Teamets sälj'} value={<CountUp value={isSeller ? stats.sales : team.sales} />} sub={isSeller ? `mål ${fmt(goals.monthly_sales)} · ${stats.goalPct}%` : `mål ${fmt(team.goal)} · ${team.goalPct}%`} tone="mint" trend={t7.pct != null ? (t7.pct >= 0 ? 'up' : 'down') : undefined} />
+        <Kpi label={isSeller ? 'TB denna månad' : 'Teamets TB'} value={<CountUp value={(isSeller ? stats.tb : team.tb) / 1000} format={(n) => fmt(n)} />} suffix="k" sub={`kr · ${isSeller ? `${stats.tbGoalPct}% av mål` : `${team.tbGoalPct}% av mål`}`} tone="ice" />
         <Kpi label="Månadsledare" value={team.leader ? team.leader.display_name : '–'} sub={team.leader ? `${fmt(team.leader.sales)} sälj · ${fmtMoney(team.leader.tb)} TB` : 'Ingen registrering ännu'} tone="gold" />
         <Kpi label="Måluppfyllelse" value={`${isSeller ? stats.goalPct : team.goalPct}%`} sub={isSeller ? `${fmt(Math.max(0, goals.monthly_sales - stats.sales))} sälj kvar` : `${fmt(Math.max(0, team.goal - team.sales))} sälj kvar`} />
-        <Kpi label="Förväntat slutresultat" value={isSeller ? (stats.projection != null ? fmt(stats.projection) : '–') : (team.projection != null ? fmt(team.projection) : '–')} sub={isSeller ? stats.projectionReason || '' : team.projectionReliable ? 'Baserat på registrerade arbetsdagar' : 'Underlag saknas'} tone="violet" />
+        <Kpi label="Förväntat slutresultat" value={isSeller ? (stats.projection != null ? <CountUp value={stats.projection} /> : '–') : (team.projection != null ? <CountUp value={team.projection} /> : '–')} sub={isSeller ? stats.projectionReason || '' : team.projectionReliable ? 'Baserat på registrerade arbetsdagar' : 'Underlag saknas'} tone="violet" />
         <Kpi label="Återstående arbetsdagar" value={String(stats.remainingWorkdays)} sub={`av ${stats.totalWorkdays} i månaden`} />
       </div>
 
       {isSeller ? (
         <>
-          <div className="grid g-2" style={{ marginBottom: 14 }}>
-            <TodayHero stats={stats} todayRow={todayRow} goals={goals} onRegister={() => setRegisterOpen(true)} onQuick={quickPlus} />
+          <div className="grid g-2 rise rise-1" style={{ marginBottom: 14 }}>
+            <TodayHero stats={stats} todayRow={todayRow} goals={goals} entries={my} streak={streak} onRegister={(date, entry) => openRegister({ date, entry })} />
             <div className="stack">
               <SceneBoundary fallback={<EngineFallback values={engineValues} />}>
                 {engineReady ? (
@@ -502,19 +511,19 @@ export default function OverviewPage() {
                 )}
               </SceneBoundary>
               <div className="grid g-2">
+                <Kpi label="Vecka mot vecka" value={<Delta value={wow.pct} />} sub={`${wow.days} dagar denna vecka · ${wow.previousDays} förra (samma veckodag)`} tone="violet" />
                 <Kpi label="Bästa dag" value={best ? fmt(best.sales) : '–'} sub={best ? best.entry_date : 'Ingen registrering'} tone="gold" />
-                <Kpi label="Sälj per timme" value={hoursMonth > 0 ? f1(stats.sales / hoursMonth) : '–'} sub={hoursMonth > 0 ? `${f1(hoursMonth)} h registrerade` : 'Inga timmar registrerade'} />
               </div>
             </div>
           </div>
 
-          <div className="grid g-2" style={{ marginBottom: 14 }}>
-            <CoachPanel seller stats={stats} todayRow={todayRow} goals={goals} />
+          <div className="grid g-2 rise rise-2" style={{ marginBottom: 14 }}>
+            <CoachPanel seller stats={stats} todayRow={todayRow} goals={goals} entries={my} />
             <GoalSnapshot goals={goals} stats={stats} todayRow={todayRow} entries={my} />
           </div>
 
-          <div className="grid g-3" style={{ marginBottom: 14 }}>
-            <div className="span-2"><WeekCard entries={my} goals={goals} /></div>
+          <div className="grid g-3 rise rise-3" style={{ marginBottom: 14 }}>
+            <div className="span-2"><Trend30Card entries={my} goals={goals} /></div>
             <div className="card">
               <div className="card-head"><div><div className="card-kicker">SNABBSTATISTIK</div><h3>Denna månad</h3></div></div>
               <div className="metric-row"><span>Registrerade dagar</span><b>{stats.days}</b></div>
@@ -522,16 +531,17 @@ export default function OverviewPage() {
               <div className="metric-row"><span>Snitt TB/sälj</span><b>{stats.avgTbPerSale == null ? '–' : fmtMoney(stats.avgTbPerSale)}</b></div>
               <div className="metric-row"><span>Vecka hittills</span><b>{fmt(weekTotal)} sälj</b></div>
               <div className="metric-row"><span>7-dagars­trend</span><Delta value={t7.pct} /></div>
+              <div className="metric-row"><span>30-dagars­trend</span><Delta value={t30.pct} /></div>
               <div className="metric-row"><span>Brandkollen</span><b>{split.brandSales} sälj</b></div>
               <div className="metric-row"><span>Konsumentkollen</span><b>{split.konsSales} sälj</b></div>
               <div className="metric-row"><span>Ej uppdelat</span><b>{split.unsplitSales} sälj</b></div>
             </div>
           </div>
 
-          <div className="grid g-3" style={{ marginBottom: 14 }}>
+          <div className="grid g-3 rise rise-4" style={{ marginBottom: 14 }}>
             <div className="card">
-              <div className="card-head"><div><div className="card-kicker">8 VECKOR</div><h3>Veckoförsäljning</h3></div></div>
-              <Sparkline values={week.map((w) => w.sales)} height={80} />
+              <div className="card-head"><div><div className="card-kicker">8 VECKOR</div><h3>Veckoförsäljning</h3></div><span className="badge">v.{week[week.length - 1]?.label.slice(-2) || ''}</span></div>
+              <Sparkline values={week.map((w) => w.sales)} height={80} goal={goals.weekly_sales} />
               <div className="row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
                 {week.map((w) => <span key={w.key} className="dim" style={{ fontSize: 9 }}>{w.label.slice(3)}</span>)}
               </div>
@@ -546,17 +556,17 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          <div className="grid g-2">
+          <div className="grid g-2 rise rise-5">
             <AchievementsCard entries={my} goals={goals} onToast={onToast} />
             <div className="card">
-              <div className="card-head"><div><div className="card-kicker">MÅNADSKALENDER</div><h3>{monthLabel(monthKey)}</h3></div></div>
+              <div className="card-head"><div><div className="card-kicker">MÅNADSKALENDER</div><h3>{monthLabel(monthKey)}</h3></div><span className="legend"><span><i className="cal-legend hit" />mål</span><span><i className="cal-legend miss" />under mål</span><span><i className="cal-legend empty" />ej registrerad</span></span></div>
               <MonthHeat entries={my} goal={goals.daily_sales} />
             </div>
           </div>
         </>
       ) : (
         <>
-          <div className="grid g-2" style={{ marginBottom: 14 }}>
+          <div className="grid g-2 rise rise-1" style={{ marginBottom: 14 }}>
             <TeamPulse team={team} />
             <SceneBoundary fallback={<EngineFallback values={engineValues} />}>
               {engineReady ? (
@@ -567,12 +577,12 @@ export default function OverviewPage() {
             </SceneBoundary>
           </div>
 
-          <div className="grid g-2" style={{ marginBottom: 14 }}>
-            <CoachPanel seller={false} stats={team.rows[0] || buildMonthStats(me.username, me.display_name, [], goals, monthKey)} goals={goals} team={team} />
-            <ManagerReport team={team} />
+          <div className="grid g-2 rise rise-2" style={{ marginBottom: 14 }}>
+            <CoachPanel seller={false} stats={team.rows[0] || buildMonthStats(me.username, me.display_name, [], goals, monthKey)} goals={goals} team={team} entries={[]} />
+            <ManagerReport team={team} members={members} />
           </div>
 
-          <div className="grid g-2" style={{ marginBottom: 14 }}>
+          <div className="grid g-2 rise rise-3" style={{ marginBottom: 14 }}>
             <div className="card">
               <div className="card-head"><div><div className="card-kicker">SÄLJRANKING</div><h3>Placering denna månad</h3></div><Badge tone="mint">Bara säljare</Badge></div>
               <div className="table-wrap">
@@ -603,11 +613,11 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          <div className="grid g-3">
+          <div className="grid g-3 rise rise-4">
             <div className="card">
               <div className="card-kicker">MÅLUPPFYLLELSE</div>
               <div className="big-number">{team.goalPct}%</div>
-              <Progress value={team.goalPct} className="lg" />
+              <Progress value={team.goalPct} className="lg" tone={team.goalPct >= 100 ? 'gold' : undefined} />
               <div className="card-note" style={{ marginTop: 8 }}>{fmt(team.sales)} av {fmt(team.goal)} sälj</div>
             </div>
             <div className="card">
@@ -624,10 +634,6 @@ export default function OverviewPage() {
           </div>
         </>
       )}
-
-      <Modal open={registerOpen} onClose={() => setRegisterOpen(false)} title="Registrera dagens resultat" width={720}>
-        <EntryForm initial={todayRow || undefined} onSaved={() => setRegisterOpen(false)} onCancel={() => setRegisterOpen(false)} />
-      </Modal>
     </div>
   );
 }
@@ -667,37 +673,28 @@ function MonthHeat({ entries, goal }: { entries: Entry[]; goal: number }) {
   const first = (new Date(Date.UTC(y, m - 1, 1, 12)).getUTCDay() + 6) % 7;
   const by = new Map(entries.map((r) => [r.entry_date, Number(r.sales)]));
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: last }, (_, i) => i + 1)];
+  const hits = [...by.values()].filter((v) => v >= goal).length;
   return (
     <div>
-      <div className="row" style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 6 }}>
-        {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d, i) => <span key={i} className="dim" style={{ fontSize: 9, textAlign: 'center' }}>{d}</span>)}
+      <div className="cal-head">
+        {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map((d) => <span key={d} className="dim">{d}</span>)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
+      <div className="cal-grid">
         {cells.map((d, i) => {
           if (!d) return <span key={i} />;
-          const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const key = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
           const v = by.get(key);
           const isToday = key === todayISO();
+          const cls = v == null ? 'empty' : v >= goal ? 'hit' : v === 0 ? 'zero' : 'miss';
           return (
-            <span
-              key={i}
-              title={v == null ? `${key} – ej registrerad` : `${key}: ${v} sälj`}
-              style={{
-                aspectRatio: '1',
-                borderRadius: 4,
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: 9.5,
-                background: v == null ? 'rgba(255,255,255,.045)' : `rgba(94,234,212,${0.18 + Math.min(v / Math.max(goal, 1), 1.2) * 0.6})`,
-                color: v == null ? 'var(--mu-2)' : '#04211c',
-                fontWeight: v == null ? 500 : 800,
-                outline: isToday ? '1px solid var(--mint)' : 'none',
-                outlineOffset: 1,
-              }}
-            >{d}</span>
+            <span key={i} className={`cal-cell ${cls} ${isToday ? 'today' : ''}`} title={v == null ? `${key} – ej registrerad` : `${key}: ${v} sälj${v >= goal ? ' · mål nått' : ''}`}>
+              <b>{d}</b>
+              {v != null && <small>{v}</small>}
+            </span>
           );
         })}
       </div>
+      <div className="card-note" style={{ marginTop: 8 }}>{hits} dagar med nått dagsmål · {by.size} registrerade dagar.</div>
     </div>
   );
 }

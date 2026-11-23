@@ -4,7 +4,9 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/components/app-provider';
 import { Icon } from '@/components/icons';
-import { Avatar, Badge, Card, Delta, Empty, Kpi, Progress, Ring, Skeleton, StackedBar } from '@/components/ui';
+import { Avatar, Badge, Card, Delta, Empty, Kpi, Progress, Ring, Skeleton, Sparkline, StackedBar } from '@/components/ui';
+import { TrendChart, dailyPoints } from '@/components/charts';
+import { buildShareText } from '@/lib/report';
 import {
   bestWeek,
   buildLeaderboard,
@@ -26,9 +28,11 @@ import {
   productSplit,
   registeredStreak,
   teamStats,
+  todayISO,
   trend,
   weeklySeries,
   weekToDate,
+  weekdayShort,
   workdaysInMonth,
   type Entry,
   type MonthStats,
@@ -275,16 +279,18 @@ function TrendsPanel({ members, monthKey }: { members: CalcMember[]; monthKey: s
                 <span className="card-note">7-dagars­trend</span><Delta value={t7.pct} />
                 <span className="card-note" style={{ marginLeft: 8 }}>30-dagars­trend</span><Delta value={t30.pct} />
               </div>
-              <div style={{ marginTop: 12 }}>
+              <div style={{ marginTop: 14 }}>
+                <div className="row-between" style={{ marginBottom: 4 }}>
+                  <div className="card-kicker">Senaste 30 dagarna · sälj per dag</div>
+                  <span className="card-note">streckad linje = dagsmål {m.goals.daily_sales}</span>
+                </div>
+                <TrendChart points={dailyPoints(m.entries, 30, weekdayShort, todayISO())} goal={m.goals.daily_sales} height={170} unit=" sälj" ariaLabel={`${m.display_name}, sälj per dag de senaste 30 dagarna`} />
+              </div>
+              <div style={{ marginTop: 10 }}>
                 <div className="card-kicker" style={{ marginBottom: 6 }}>8 veckor · sälj</div>
-                <div className="bars" style={{ height: 110 }}>
-                  {weeks.map((w, i) => (
-                    <div className="bar-col" key={w.key} title={`${w.key}: ${w.sales} sälj`}>
-                      <span className="bar-val">{w.sales}</span>
-                      <div className="bar-track"><div className="bar" style={{ height: `${Math.max(3, (w.sales / Math.max(1, ...weeks.map((x) => x.sales))) * 100)}%` }} /></div>
-                      <span className="bar-lab">{w.label.slice(3)}</span>
-                    </div>
-                  ))}
+                <Sparkline values={weeks.map((w) => w.sales)} height={64} goal={m.goals.weekly_sales} />
+                <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
+                  {weeks.map((w) => <span key={w.key} className="dim" style={{ fontSize: 9 }} title={`${w.key}: ${w.sales} sälj`}>{w.label.slice(3)}</span>)}
                 </div>
               </div>
             </div>
@@ -395,6 +401,16 @@ export default function MonthPage() {
     toast(`CSV för ${monthLabel(monthKey)} är nedladdad.`);
   }
 
+  async function shareReport() {
+    const text = buildShareText(monthKey, members, data!.me);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`Rapport för ${monthLabel(monthKey)} är kopierad — klistra in i WhatsApp eller Slack.`);
+    } catch {
+      toast('Kunde inte kopiera automatiskt.', 'err');
+    }
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -409,6 +425,7 @@ export default function MonthPage() {
           <select className="select month-select" value={monthKey} onChange={(e) => setMonthKey(e.target.value)} aria-label="Välj månad">
             {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
           </select>
+          <button className="btn" onClick={shareReport} title="Kopiera en textsammanfattning att dela"><Icon name="share" size={15} /> Kopiera rapport</button>
           <button className="btn" onClick={exportCsv}><Icon name="download" size={15} /> CSV</button>
         </div>
       </div>

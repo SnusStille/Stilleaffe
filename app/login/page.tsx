@@ -38,10 +38,17 @@ export default function LoginPage() {
   const [shake, setShake] = useState(false);
   const [scene, setScene] = useState(false);
   const [reduced, setReduced] = useState(false);
+  const [caps, setCaps] = useState(false);
+  const [userReady, setUserReady] = useState(false);
 
   useEffect(() => {
     const e = new URLSearchParams(location.search).get('e');
     if (e && MSG[e]) setError(MSG[e]);
+    try {
+      const saved = localStorage.getItem('ll_user');
+      if (saved) setUsername(saved);
+    } catch {}
+    setUserReady(true);
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     setReduced(!!mq?.matches);
     const desktop = window.matchMedia?.('(min-width: 900px)').matches;
@@ -75,6 +82,7 @@ export default function LoginPage() {
         bad();
         return;
       }
+      try { localStorage.setItem('ll_user', username.trim()); } catch {}
       router.replace('/');
       router.refresh();
     } catch {
@@ -88,6 +96,11 @@ export default function LoginPage() {
   function bad() {
     setShake(true);
     window.setTimeout(() => setShake(false), 480);
+  }
+
+  function capsState(e: React.KeyboardEvent<HTMLInputElement> | React.MouseEvent<HTMLInputElement>) {
+    const ke = e as React.KeyboardEvent<HTMLInputElement>;
+    if (typeof ke.getModifierState === 'function') setCaps(ke.getModifierState('CapsLock'));
   }
 
   return (
@@ -138,38 +151,47 @@ export default function LoginPage() {
           <form onSubmit={onSubmit} noValidate>
             <div className="auth-field">
               <label className="label" htmlFor="username">Användarnamn</label>
-              <input
-                id="username"
-                name="username"
-                className="input"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="t.ex. stille"
-                disabled={busy}
-              />
+              <div className="input-group">
+                <span className="input-icon"><Icon name="user" size={15} /></span>
+                <input
+                  id="username"
+                  name="username"
+                  className="input has-icon"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                  placeholder="ditt förnamn, t.ex. stille"
+                  disabled={busy || !userReady}
+                />
+              </div>
             </div>
             <div className="auth-field">
               <label className="label" htmlFor="password">Lösenord</label>
               <div className="input-group">
+                <span className="input-icon"><Icon name="lock" size={15} /></span>
                 <input
                   id="password"
                   name="password"
-                  className="input"
+                  className="input has-icon"
                   type={show ? 'text' : 'password'}
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyUp={capsState}
+                  onKeyDown={capsState}
                   placeholder="Ditt lösenord"
                   disabled={busy}
-                  aria-invalid={!!error}
+                  aria-invalid={!!error && !caps}
+                  aria-describedby={caps ? 'caps-warn' : undefined}
                 />
                 <button type="button" className="toggle" onClick={() => setShow((v) => !v)} aria-label={show ? 'Dölj lösenord' : 'Visa lösenord'} tabIndex={0}>
                   <Icon name={show ? 'eye-off' : 'eye'} size={16} />
                 </button>
               </div>
+              {caps && <div id="caps-warn" className="caps-warn" role="status"><Icon name="alert" size={13} /> Caps Lock är påslaget.</div>}
             </div>
             <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={busy} style={{ marginTop: 6 }}>
               {busy ? (
@@ -186,9 +208,9 @@ export default function LoginPage() {
           </form>
 
           <div className="auth-note">
-            <b>Så fungerar det:</b> du loggar in med ditt eget användarnamn och lösenord. Servern hämtar din
-            roll från den autentiserade identiteten — den kan inte ändras från webbläsaren. Sessionen är
-            HttpOnly, Secure och tidsbegränsad.
+            <b>Så fungerar det:</b> användarnamnet är ditt förnamn i små bokstäver. Servern hämtar din roll från
+            den autentiserade identiteten — den kan inte ändras från webbläsaren. Sessionen är HttpOnly, Secure
+            och gäller i 12 timmar. Glömt lösenordet? Hör av dig till ledningen som uppdaterar det.
           </div>
 
           <div className="auth-foot">

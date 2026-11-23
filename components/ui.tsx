@@ -25,11 +25,11 @@ export function SectionHead({ title, kicker, action, sub }: { title: React.React
   );
 }
 
-export function Kpi({ label, value, sub, tone, className = '', trend }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: 'mint' | 'ice' | 'gold' | 'violet'; className?: string; trend?: 'up' | 'down' }) {
+export function Kpi({ label, value, sub, tone, className = '', trend, suffix }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: 'mint' | 'ice' | 'gold' | 'violet'; className?: string; trend?: 'up' | 'down'; suffix?: string }) {
   return (
     <div className={`kpi ${tone || ''} ${trend ? `trend-${trend}` : ''} ${className}`}>
       <div className="k">{label}</div>
-      <div className="v">{value}</div>
+      <div className="v">{value}{suffix && <small>{suffix}</small>}</div>
       {sub && <div className="s">{sub}</div>}
     </div>
   );

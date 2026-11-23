@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
+  ACHIEVEMENTS,
   addDays,
   buildLeaderboard,
   buildMonthCsv,
@@ -18,6 +19,7 @@ import {
   trend,
   weekToDate,
   weeklySeries,
+  weekTotalsAll,
   workdaysBetween,
   workdaysInMonth,
   type Entry,
@@ -326,5 +328,37 @@ describe('weekToDate — WoW on the same weekday window', () => {
   it('returns null with thin data', () => {
     expect(weekToDate([entry('2026-11-18', 10)], '2026-11-20').pct).toBeNull();
     expect(weekToDate([], '2026-11-20').pct).toBeNull();
+  });
+});
+
+describe('achievements (new v1.2 set)', () => {
+  const G: Goals = { ...GOALS };
+  const week = (monday: string, values: number[]) => values.map((v, i) => entry(addDays(monday, i), v));
+  it('weekTotalsAll groups per Monday with sales and day counts', () => {
+    const rows = [...week('2026-11-16', [5, 5, 5, 5, 5]), entry('2026-11-23', 2)];
+    const totals = weekTotalsAll(rows);
+    expect(totals).toHaveLength(2);
+    expect(totals[0]).toEqual({ key: '2026-11-16', sales: 25, days: 5 });
+    expect(totals[1].sales).toBe(2);
+  });
+  it('week_goal needs ≥3 registered days and weekly sales ≥ goal', () => {
+    const by = (k: string) => ACHIEVEMENTS.find((a) => a.key === k)!;
+    // 40 sales on a single day in one week → weekly sum is enough but only 1 day → not unlocked.
+    expect(by('week_goal').cond([entry('2026-11-16', 40)], G)).toBe(false);
+    expect(by('week_goal').cond(week('2026-11-16', [12, 12, 12]), G)).toBe(true);
+    expect(by('week_goal').cond(week('2026-11-16', [10, 10, 10]), G)).toBe(false);
+  });
+  it('perfect_week needs five consecutive goal days; totals badges count lifetime sales', () => {
+    const by = (k: string) => ACHIEVEMENTS.find((a) => a.key === k)!;
+    expect(by('perfect_week').cond(week('2026-11-16', [7, 7, 7, 7, 7]), G)).toBe(true);
+    expect(by('perfect_week').cond(week('2026-11-16', [7, 7, 7, 7, 6]), G)).toBe(false);
+    expect(by('sales_100').cond(week('2026-11-16', [20, 20, 20, 20, 20]), G)).toBe(true);
+    expect(by('sales_100').cond(week('2026-11-16', [19, 20, 20, 20, 20]), G)).toBe(false);
+    expect(by('sales_500').cond(week('2026-11-16', [100, 100, 100, 100, 100]), G)).toBe(true);
+    expect(by('entries_25').cond(Array.from({ length: 25 }, (_, i) => entry(addDays('2026-10-01', i), 1)), G)).toBe(true);
+  });
+  it('every achievement key is unique', () => {
+    const keys = ACHIEVEMENTS.map((a) => a.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });

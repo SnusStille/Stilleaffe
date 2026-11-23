@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Icon } from '@/components/icons';
 import { Badge, CopyButton, Empty, SourceTag } from '@/components/ui';
+import { ListenButton } from '@/components/listen-button';
 import {
   CATEGORY_LABEL,
   CATEGORY_ORDER,
@@ -56,6 +57,7 @@ export default function GuidePage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ title: '', body: '', bullets: '', source: 'internal' as GuideSection['source'], sourceNote: '' });
   const [saving, setSaving] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const sections = useMemo(() => effectiveSections(overrides), [overrides]);
   const filtered = useMemo(() => filterSections(sections, { service, category, query }), [sections, service, category, query]);
@@ -66,6 +68,19 @@ export default function GuidePage() {
   useEffect(() => {
     setFavs(readFavorites());
     setRecent(readRecent());
+    // Deep link from the command palette: /guide?q=brandkollen
+    const q = new URLSearchParams(location.search).get('q');
+    if (q) setQuery(q);
+    // "/" focuses search when not typing anywhere else.
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable))) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
     fetch('/api/guide', { credentials: 'same-origin' })
       .then((r) => r.json())
       .then((j) => { if (j.overrides) setOverrides(j.overrides); })
@@ -204,7 +219,7 @@ export default function GuidePage() {
         <div>
           <div className="guide-search">
             <Icon name="search" />
-            <input className="input" placeholder="Sök manus, invändning, avslut…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Sök i spelguiden" />
+            <input ref={searchRef} className="input" placeholder="Sök manus, invändning, avslut…  (tryck /)" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Sök i spelguiden" />
             {query && <button className="copy-btn" style={{ position: 'absolute', right: 8, top: 8 }} onClick={() => setQuery('')}>Rensa</button>}
           </div>
 
@@ -229,7 +244,7 @@ export default function GuidePage() {
                   <div className="quick-card" key={q.title}>
                     <b>{q.title}</b>
                     <p>{q.text}</p>
-                    <div style={{ marginTop: 8 }}><CopyButton text={q.copy} label="Kopiera" mint /></div>
+                    <div className="row" style={{ marginTop: 8, gap: 6 }}><CopyButton text={q.copy} label="Kopiera" mint /><ListenButton text={q.text} /></div>
                   </div>
                 ))}
               </div>
@@ -314,6 +329,7 @@ export default function GuidePage() {
                               </div>
                               <div className="guide-tools">
                                 <CopyButton text={copySection(s)} label="Kopiera avsnitt" mint />
+                                <ListenButton text={copySection(s)} />
                                 {s.category === 'invandning' && <CopyButton text={s.body} label="Kopiera svar" />}
                                 {isManager && <button className="copy-btn" onClick={() => startEdit(s)}><Icon name="edit" size={12} /> Redigera</button>}
                               </div>

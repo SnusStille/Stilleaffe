@@ -1,14 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from './app-provider';
 import { BrandMark } from './brand';
 import { Icon, type IconName } from './icons';
-import { Modal } from './ui';
 import { EntryForm } from './entry-form';
-import { dateLabel, todayISO } from '@/lib/calc';
+import { Modal } from './ui';
+import { CommandPalette } from './command-palette';
+import { ShortcutsModal } from './shortcuts';
+import { useQuickPlus } from './use-quick-plus';
+import { buildCommands, commandsFor, type Command } from '@/lib/command';
+import { buildShareText } from '@/lib/report';
+import { dateLabel, fmt, todayISO } from '@/lib/calc';
+import type { Entry } from '@/lib/types';
 
 type NavItem = { href: string; label: string; icon: IconName };
 
@@ -41,14 +47,27 @@ const TITLES: Record<string, string> = {
   '/ai': 'AI-coach',
 };
 
+function isMac() {
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
+}
+
+function isTypingTarget(el: EventTarget | null) {
+  if (!el || !(el instanceof HTMLElement)) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { me, reload, toast, motionMode } = useApp();
-  const [registerOpen, setRegisterOpen] = useState(false);
+  const {
+    me, data, reload, toast, motionMode, sound, setSound, setMotionMode,
+    register, openRegister, closeRegister, paletteOpen, setPaletteOpen, helpOpen, setHelpOpen,
+  } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const { plus, busy: plussing } = useQuickPlus();
 
   useEffect(() => {
     let on = true;
@@ -70,11 +89,47 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const isSeller = me.role === 'seller';
   const active = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
-  async function refresh() {
+  const commands = useMemo(() => commandsFor(buildCommands(), me.role), [me.role]);
+
+  async function refresh(quiet = false) {
     setRefreshing(true);
     await reload();
     setRefreshing(false);
-    toast('Siffrorna är uppdaterade.');
+    if (!quiet) toast('Siffrorna är uppdaterade.');
+  }
+
+  async function copyReport() {
+    if (!data) return toast('Ingen data att kopiera ännu.', 'err');
+    const members = data.team.map((t) => ({
+      ...t,
+      entries: t.entries.map((e) => ({ ...e, note: null, rating: null, mood: null, tags: [] })) as Entry[],
+    }));
+    const text = buildShareText(todayISO().slice(0, 7), members, me);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Månadsrapporten är kopierad — klistra in i WhatsApp eller Slack.');
+    } catch {
+      toast('Kunde inte kopiera automatiskt.', 'err');
+    }
+  }
+
+  async function runCommand(c: Command) {
+    switch (c.action.type) {
+      case 'navigate': return router.push(c.action.href);
+      case 'register': return openRegister({ date: c.action.date });
+      case 'quick-plus': return void plus();
+      case 'refresh': return void refresh();
+      case 'copy-report': return void copyReport();
+      case 'toggle-sound': setSound(!sound); return toast(sound ? 'Ljudet är avstängt.' : 'Ljudet är påslaget.', 'info');
+      case 'toggle-motion': {
+        const next = motionMode === 'studio' ? 'quiet' : 'studio';
+        setMotionMode(next);
+        return toast(next === 'studio' ? 'Studio-läge: full rörelse.' : 'Tyst läge: inga animationer eller 3D.', 'info');
+      }
+      case 'shortcuts': return setHelpOpen(true);
+      case 'guide-search': return router.push(`/guide?q=${encodeURIComponent(c.action.query)}`);
+      case 'logout': return logout();
+    }
   }
 
   async function logout() {
@@ -82,6 +137,41 @@ export function Shell({ children }: { children: React.ReactNode }) {
     router.replace('/login?e=logged_out');
     router.refresh();
   }
+
+  // Global shortcuts: ⌘/Ctrl+K anywhere; N / R / ? when not typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setPaletteOpen(!paletteOpen);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setPaletteOpen(false);
+        setHelpOpen(false);
+        setMenuOpen(false);
+        return;
+      }
+      if (isTypingTarget(e.target) || mod || e.altKey) return;
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault();
+        setHelpOpen(!helpOpen);
+      } else if (e.key === 'n' || e.key === 'N') {
+        if (isSeller) { e.preventDefault(); openRegister(); }
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        void refresh();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSeller, openRegister, setPaletteOpen, setHelpOpen, paletteOpen, helpOpen]);
+
+  const todayRow = data?.myEntries.find((e) => e.entry_date === todayISO());
+  const goals = data?.team.find((t) => t.username === me.username)?.goals;
+  const todayPct = goals && todayRow ? Math.min(100, Math.round((Number(todayRow.sales) / Math.max(1, goals.daily_sales)) * 100)) : 0;
 
   return (
     <div className="app-shell" data-motion={motionMode}>
@@ -112,6 +202,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
           ))}
         </div>
         <div className="sidebar-spacer" />
+        {isSeller && goals && (
+          <Link href="/" className="side-today" aria-label={todayRow ? `Idag ${todayRow.sales} av ${goals.daily_sales} sälj` : 'Idag ej registrerat'}>
+            <div className="side-today-top">
+              <span className="card-kicker">Idag</span>
+              <b>{todayRow ? `${fmt(Number(todayRow.sales))} / ${fmt(goals.daily_sales)}` : 'Ej registrerat'}</b>
+            </div>
+            <div className="progress" style={{ marginTop: 7 }}><i style={{ width: `${todayPct}%` }} /></div>
+          </Link>
+        )}
+        <button className="side-kbd" onClick={() => setPaletteOpen(true)} aria-label="Öppna kommandopalett (Ctrl+K)">
+          <Icon name="search" size={14} />
+          <span>Sök eller hoppa till…</span>
+          <kbd className="kbd">{isMac() ? '⌘' : 'Ctrl'}</kbd><kbd className="kbd">K</kbd>
+        </button>
         <div className="sidebar-user">
           <div className={`avatar ${isSeller ? '' : 'manager'}`}>{me.display_name.slice(0, 1)}</div>
           <div>
@@ -139,20 +243,28 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="topbar-date">{dateLabel(todayISO())}</span>
           </div>
           <div className="topbar-right">
-            <button className="icon-btn" onClick={refresh} aria-label="Uppdatera" title="Uppdatera siffrorna">
-              <Icon name="refresh" size={16} style={{ opacity: refreshing ? 0.4 : 1, transform: refreshing ? 'rotate(180deg)' : undefined, transition: 'transform .4s' }} />
+            <button className="icon-btn" onClick={() => setPaletteOpen(true)} aria-label="Sök (Ctrl+K)" title="Sök eller hoppa till (Ctrl+K)">
+              <Icon name="search" size={16} />
+            </button>
+            <button className="icon-btn" onClick={() => refresh()} aria-label="Uppdatera (R)" title="Uppdatera siffrorna (R)">
+              <Icon name="refresh" size={16} className={refreshing ? 'spin-icon' : ''} />
             </button>
             {isSeller && (
-              <button className="btn btn-primary btn-sm" onClick={() => setRegisterOpen(true)}>
-                <Icon name="plus" size={14} /> Registrera
-              </button>
+              <>
+                <button className="btn btn-primary btn-sm" onClick={() => openRegister()}>
+                  <Icon name="plus" size={14} /> Registrera
+                </button>
+                <button className="icon-btn" onClick={() => plus()} disabled={plussing} aria-label="+1 sälj idag" title="+1 sälj idag">
+                  <Icon name="zap" size={16} />
+                </button>
+              </>
             )}
             <Link href="/comments" className="icon-btn" aria-label={unread ? `Kommentarer, ${unread} olästa` : 'Kommentarer'} title="Kommentarer">
               <Icon name="comments" size={16} />
               {unread > 0 && <span className="dot" />}
             </Link>
-            <button className="icon-btn mobile-only" onClick={() => setMenuOpen(true)} aria-label="Alla verktyg" title="Alla verktyg">
-              <Icon name="menu" />
+            <button className="icon-btn" onClick={() => setHelpOpen(true)} aria-label="Kortkommandon (?)" title="Kortkommandon (?)">
+              <Icon name="keyboard" size={16} />
             </button>
           </div>
         </header>
@@ -160,13 +272,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <main className="page" id="main">{children}</main>
       </div>
 
-      <Modal open={registerOpen} onClose={() => setRegisterOpen(false)} title="Registrera dagens resultat" width={720}>
-        <EntryForm onSaved={() => setRegisterOpen(false)} onCancel={() => setRegisterOpen(false)} />
-      </Modal>
+      {register && (
+        <RegisterDialog
+          date={register.date}
+          entry={register.entry}
+          onClose={closeRegister}
+        />
+      )}
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} onRun={runCommand} />
+      <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {menuOpen && (
         <div className="modal-backdrop" style={{ alignItems: 'stretch', padding: 0 }} onClick={() => setMenuOpen(false)}>
-          <div style={{ width: 'min(360px, 86vw)', background: 'linear-gradient(170deg,#12181f,#0a0e13)', borderRight: '1px solid var(--bd)', padding: 22, overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="drawer" onClick={(e) => e.stopPropagation()}>
             <div className="row-between" style={{ marginBottom: 18 }}>
               <div className="brand-name" style={{ fontSize: 14 }}>LABEL <span className="lab">LAB</span></div>
               <button className="modal-x" onClick={() => setMenuOpen(false)} aria-label="Stäng"><Icon name="x" size={16} /></button>
@@ -184,6 +303,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {TOOLS.map((item) => (
                 <Link key={item.href} href={item.href} className={`nav-item ${active(item.href) ? 'on' : ''}`}>
                   <Icon name={item.icon} /> <span>{item.label}</span>
+                  {item.href === '/comments' && unread > 0 && <span className="nav-badge">{unread}</span>}
                 </Link>
               ))}
             </div>
@@ -204,3 +324,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+
+function RegisterDialog({ date, entry, onClose }: { date: string | null; entry: Entry | null; onClose: () => void }) {
+  return (
+    <Modal open onClose={onClose} title={entry?.id ? 'Uppdatera registrering' : date && date !== todayISO() ? `Registrera ${dateLabel(date).toLowerCase()}` : 'Registrera dagens resultat'} width={720}>
+      <EntryForm key={`${date || 'today'}-${entry?.id || 'new'}`} initial={entry} date={date || undefined} onSaved={onClose} onCancel={onClose} />
+    </Modal>
+  );
+}
+

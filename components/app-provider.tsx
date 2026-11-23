@@ -1,10 +1,13 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { DataPayload } from '@/lib/types';
+import { Icon } from './icons';
+import type { DataPayload, Entry } from '@/lib/types';
 import type { AuthUser } from '@/lib/types';
 
 type ToastKind = 'ok' | 'err' | 'info';
+
+export type RegisterRequest = { date: string | null; entry: Entry | null };
 
 type Ctx = {
   me: AuthUser;
@@ -21,9 +24,19 @@ type Ctx = {
   reducedMotion: boolean;
   motionMode: 'studio' | 'quiet';
   setMotionMode: (v: 'studio' | 'quiet') => void;
+  /** Shared "Registrera" dialog — opened from the topbar, overview, week strip or command palette. */
+  register: RegisterRequest | null;
+  openRegister: (req?: { date?: string; entry?: Entry | null }) => void;
+  closeRegister: () => void;
+  paletteOpen: boolean;
+  setPaletteOpen: (v: boolean) => void;
+  helpOpen: boolean;
+  setHelpOpen: (v: boolean) => void;
 };
 
 const AppContext = createContext<Ctx | null>(null);
+
+const TOAST_ICON: Record<ToastKind, 'check-circle' | 'alert-circle' | 'info'> = { ok: 'check-circle', err: 'alert-circle', info: 'info' };
 
 export function AppProvider({ user, children }: { user: AuthUser; children: React.ReactNode }) {
   const [data, setData] = useState<DataPayload | null>(null);
@@ -34,13 +47,16 @@ export function AppProvider({ user, children }: { user: AuthUser; children: Reac
   const [haptics, setHapticsState] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [motionMode, setMotionModeState] = useState<'studio' | 'quiet'>('studio');
+  const [register, setRegister] = useState<RegisterRequest | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const idRef = useRef(0);
   const alive = useRef(true);
 
   const toast = useCallback((message: string, kind: ToastKind = 'ok') => {
     const id = ++idRef.current;
     setToasts((list) => [...list.slice(-3), { id, message, kind }]);
-    window.setTimeout(() => setToasts((list) => list.filter((t) => t.id !== id)), 3200);
+    window.setTimeout(() => setToasts((list) => list.filter((t) => t.id !== id)), kind === 'err' ? 5200 : 3400);
   }, []);
 
   const reload = useCallback(async () => {
@@ -99,6 +115,11 @@ export function AppProvider({ user, children }: { user: AuthUser; children: Reac
     try { localStorage.setItem('ll_motion', v); } catch {}
   }, []);
 
+  const openRegister = useCallback((req?: { date?: string; entry?: Entry | null }) => {
+    setRegister({ date: req?.date || null, entry: req?.entry || null });
+  }, []);
+  const closeRegister = useCallback(() => setRegister(null), []);
+
   const value = useMemo<Ctx>(
     () => ({
       me: user,
@@ -115,8 +136,15 @@ export function AppProvider({ user, children }: { user: AuthUser; children: Reac
       reducedMotion,
       motionMode,
       setMotionMode,
+      register,
+      openRegister,
+      closeRegister,
+      paletteOpen,
+      setPaletteOpen,
+      helpOpen,
+      setHelpOpen,
     }),
-    [user, data, loading, error, reload, toast, toasts, sound, haptics, setSound, setHaptics, reducedMotion, motionMode, setMotionMode],
+    [user, data, loading, error, reload, toast, toasts, sound, haptics, setSound, setHaptics, reducedMotion, motionMode, setMotionMode, register, openRegister, closeRegister, paletteOpen, helpOpen],
   );
 
   return (
@@ -124,7 +152,10 @@ export function AppProvider({ user, children }: { user: AuthUser; children: Reac
       {children}
       <div className="toast-wrap" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.kind}`}>{t.message}</div>
+          <div key={t.id} className={`toast ${t.kind}`}>
+            <Icon name={TOAST_ICON[t.kind]} size={15} className="toast-ic" />
+            <span>{t.message}</span>
+          </div>
         ))}
       </div>
     </AppContext.Provider>

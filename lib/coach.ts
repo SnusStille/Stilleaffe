@@ -1,5 +1,5 @@
 import type { Entry, Goals } from './types';
-import { f1, fmt, fmtMoney, MonthStats, teamStats, type LeaderRow } from './calc';
+import { f1, fmt, fmtMoney, personalRecord, weekToDate, weeklySeries, MonthStats, teamStats, type LeaderRow } from './calc';
 
 export function sellerEvidence(stats: MonthStats, todayRow: Entry | undefined, goals: Goals) {
   const todayEvidence = todayRow
@@ -53,4 +53,25 @@ export function paceText(stats: MonthStats): string {
 
 export function rankOf(rows: LeaderRow[], username: string) {
   return rows.find((r) => r.username === username)?.rank ?? null;
+}
+
+/** Short, evidence-bound prompts behind the quick-action chips in the coach panel. */
+export function motivatePrompt(stats: MonthStats, todayRow: Entry | undefined, goals: Goals): string {
+  const { todayEvidence, monthEvidence, paceEvidence } = sellerEvidence(stats, todayRow, goals);
+  return `Ge mig en kort, ärlig pep-talk (max 6 meningar) utifrån mina faktiska siffror — idag: ${todayEvidence}; månaden: ${monthEvidence}; takt: ${paceEvidence}. Nämn något konkret jag gjort bra, en sak att fokusera på resten av dagen och avsluta med en tydlig nästa åtgärd. Inga påhittade siffror, ingen faktion.`;
+}
+
+export function weekReviewPrompt(entries: Entry[], goals: Goals): string {
+  const weeks = weeklySeries(entries, 4).map((w) => `${w.label}: ${w.sales} sälj på ${w.days} registrerade dagar`);
+  const wow = weekToDate(entries);
+  const best = personalRecord(entries);
+  const wowText = wow.pct == null ? 'vecka mot vecka kan inte jämföras säkert (för få registrerade dagar)' : `${wow.pct >= 0 ? '+' : ''}${wow.pct}% mot samma veckodag förra veckan`;
+  return `Analysera mina senaste fyra veckor: ${weeks.join('; ')}. Vecka mot vecka: ${wowText}. Personligt rekord: ${best ? `${best.sales} sälj (${best.entry_date})` : 'inget ännu'}. Dagsmål: ${goals.daily_sales}. Identifiera mönster (vilka veckodagar/dagar som är starka eller svaga), säg vad jag ska fortsätta med och ge tre konkreta förbättringar för nästa vecka. Behandla saknade registreringar som saknade, inte som noll, och hitta inte på fakta.`;
+}
+
+export function supportPrompt(team: ReturnType<typeof teamStats>): string {
+  const lines = team.rows.map(
+    (r) => `${r.display_name}: ${r.sales} sälj, mål ${r.goalPct}%, ${r.registeredWorkdays}/${r.elapsedWorkdays} vardagar registrerade${r.avgPerWorkday == null ? '' : `, ${f1(r.avgPerWorkday)} sälj/arbetsdag`}`,
+  );
+  return `Jag är chef. Utifrån teamets registreringar denna månad — ${lines.join('; ')} — säg kort och konkret: (1) vem behöver mest stöd just nu och varför, (2) vem förtjänar en beröm, (3) en respektfull fråga jag kan ställa i nästa uppföljningssamtal till varje säljare. Om underlaget är tunt, säg det istället för att gissa. Föreslå inga ändringar av säljsiffror eller mål.`;
 }

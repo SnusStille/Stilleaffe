@@ -769,11 +769,41 @@ export type AchievementDef = {
   cond: (rows: Entry[], goals: Goals) => boolean;
 };
 
+/** Sales per ISO week (Monday key) across the whole history — used by achievements. */
+export function weekTotalsAll(entries: { entry_date: string; sales: number }[]): { key: string; sales: number; days: number }[] {
+  const map = new Map<string, { sales: number; days: number }>();
+  for (const e of entries) {
+    const k = weekMonday(e.entry_date);
+    const cur = map.get(k) || { sales: 0, days: 0 };
+    cur.sales += Number(e.sales || 0);
+    cur.days += 1;
+    map.set(k, cur);
+  }
+  return [...map.entries()].map(([key, v]) => ({ key, ...v })).sort((a, b) => a.key.localeCompare(b.key));
+}
+
 export const ACHIEVEMENTS: AchievementDef[] = [
   { key: 'first_entry', name: 'Första steget', emoji: '🌱', desc: 'Du registrerade din första dag.', cond: (r) => r.length >= 1 },
   { key: 'first_goal', name: 'Dagsmål nått', emoji: '🎯', desc: 'Du nådde dagsmålet en dag.', cond: (r, g) => g.daily_sales > 0 && r.some((x) => x.sales >= g.daily_sales) },
   { key: 'entries_10', name: '10 dagar', emoji: '📅', desc: '10 registrerade dagar.', cond: (r) => r.length >= 10 },
+  { key: 'entries_25', name: 'Raster', emoji: '🗓️', desc: '25 registrerade dagar.', cond: (r) => r.length >= 25 },
   { key: 'entries_50', name: 'Disciplin', emoji: '📚', desc: '50 registrerade dagar.', cond: (r) => r.length >= 50 },
+  {
+    key: 'week_goal',
+    name: 'Veckomål nått',
+    emoji: '📈',
+    desc: 'En vecka (minst 3 registrerade dagar) där veckomålet nåddes.',
+    cond: (r, g) => g.weekly_sales > 0 && weekTotalsAll(r).some((w) => w.days >= 3 && w.sales >= g.weekly_sales),
+  },
+  {
+    key: 'perfect_week',
+    name: 'Perfekt vecka',
+    emoji: '🌟',
+    desc: 'Fem arbetsdagar i rad där dagsmålet nåddes.',
+    cond: (r, g) => bestGoalStreak(r, g) >= 5,
+  },
+  { key: 'sales_100', name: 'Hundraklubben', emoji: '💯', desc: '100 sälj totalt.', cond: (r) => r.reduce((s, x) => s + Number(x.sales || 0), 0) >= 100 },
+  { key: 'sales_500', name: 'Femhundraklubben', emoji: '🎖️', desc: '500 sälj totalt.', cond: (r) => r.reduce((s, x) => s + Number(x.sales || 0), 0) >= 500 },
   { key: 'streak_3', name: 'I form', emoji: '🔥', desc: '3 arbetsdagar i rad med mål.', cond: (r, g) => bestGoalStreak(r, g) >= 3 },
   { key: 'streak_7', name: 'En hel vecka', emoji: '💪', desc: '7 arbetsdagar i rad med mål.', cond: (r, g) => bestGoalStreak(r, g) >= 7 },
   { key: 'streak_14', name: 'Två veckor', emoji: '🏅', desc: '14 arbetsdagar i rad med mål.', cond: (r, g) => bestGoalStreak(r, g) >= 14 },

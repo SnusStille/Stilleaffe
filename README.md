@@ -3,7 +3,11 @@
 Privat säljuppföljning för Label Lab (partner till ViPo Säkerhetstjänster). Next.js 15 + Supabase,
 fyra konton med rollbaserad åtkomst, registrering per säljare och dag, produktuppdelning
 (Brandkollen / Konsumentkollen), månadsöversikt med takt och prognos, Spelguide, AI-coach
-(`claude-sonnet-5-5`) och en Dark Glass-design med 3D-scener som aldrig är i vägen för flödet.
+(`claude-sonnet-5-5`) och en Dark Glass-design med 3D-scener som aldrig är i vägan för flödet.
+
+**v1.2-flödet:** kommandopalett (`⌘/Ctrl + K`), veckoremsa med klickbara dagar, `+1 sälj`-knapp, tvåstegs-
+radering (inga webbläsardialoger), riktiga diagram med hover, målkalender, prestationer, uppläsning av
+manus med webbläsarens svenska röst, kopieringsklar månadsrapport och kortkommandon (`?` visar alla).
 
 ## Snabbstart lokalt (Node.js 22.x)
 
@@ -81,9 +85,9 @@ tests/                   vitest: beräkningar, behörigheter, sessioner, Spelgui
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # 56 tester: datum/kalender, takt & prognos, ranking, produktuppdelning, CSV, scrypt, sessioner, route-behörighet, Spelguide
+npm test            # 83 tester: datum/kalender, takt & prognos, ranking, produktuppdelning, CSV, prestationer, scrypt, sessioner, route-behörighet, Spelguide, kommandopalett, rapport, coach-prompter, UI (jsdom)
 npm run build
-bash scripts/e2e-local.sh   # mot lokal server + mock: alla fyra inloggningar, Fredland == Affe, Kvist == Stille, samma datum för två säljare, RLS på route-nivå
+bash scripts/e2e-local.sh   # 63 kontroller mot lokal server + mock: alla fyra inloggningar, Fredland == Affe, Kvist == Stille, samma datum för två säljare, RLS på route-nivå
 ```
 
 `/api/health` visar liveness publikt (`ok`, `db`, `v`) och miljö/tabellstatus endast för chefer.
